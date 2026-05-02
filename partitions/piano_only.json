@@ -1,0 +1,1741 @@
+{
+  "meta": {
+    "piece": "Clocks - Coldplay (Easy Piano)",
+    "excerpt": "0:00 - 1:05",
+    "duration_ms": 65500,
+    "vitesse": 1.0,
+    "vitesse_info": "timestamp_reel_ms = timestamp_ms / vitesse  |  ex: vitesse=0.5 => x2 plus lent"
+  },
+  "instruments": {
+    "groupe_1": {
+      "note_count": 82,
+      "notes": [
+        {
+          "note": "D5",
+          "timestamp_ms": 0,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 0,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 0,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 726,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 1452,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 2419,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 3145,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 4113,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 4839,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 5806,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 5806,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 6532,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 7258,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 8226,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 8952,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 9919,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 10645,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 11613,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 12339,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 13065,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 14032,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 14758,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 15726,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 16452,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 17419,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 17419,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 17419,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 18145,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 18871,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 19839,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 20565,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 21532,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 22258,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 23226,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 23226,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 23226,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 23952,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 24677,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 25645,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 26371,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 27339,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 28065,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 29032,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 29032,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 29758,
+          "duration_ms": 1148,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 31452,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 32661,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 33629,
+          "duration_ms": 1148,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 35565,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 36774,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 36774,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 36774,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 36774,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 38468,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 39677,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 40887,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 43306,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 44516,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 44516,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 44516,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 45968,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 46935,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 48387,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 48387,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 48387,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 48387,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 50323,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 50323,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 52016,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 52984,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 54194,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 54194,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 54194,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 54194,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 55887,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 56855,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 58548,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 60000,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 60000,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 60000,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 61452,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#5",
+          "timestamp_ms": 63387,
+          "duration_ms": 483,
+          "velocity": 0.63
+        }
+      ]
+    },
+    "groupe_2": {
+      "note_count": 84,
+      "notes": [
+        {
+          "note": "A4",
+          "timestamp_ms": 242,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 968,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 1935,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 1935,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 1935,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 2661,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 3387,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 4355,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 5081,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 6048,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 6774,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 7742,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 7742,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 7742,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 8468,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 9194,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 10161,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 10887,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 11855,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 12581,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 13548,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 13548,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 14274,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 15000,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 15968,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 16694,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 17661,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 18387,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 19355,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 20081,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 20806,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 21774,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 22500,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 23468,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 24194,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 25161,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 25161,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 25161,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 25887,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 26613,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 27581,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 28306,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 29274,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 30968,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 30968,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 30968,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 30968,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 30968,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 31935,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 32903,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 32903,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 32903,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 32903,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 34839,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 34839,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 35806,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 37016,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 38710,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 38710,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 38710,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 38710,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 38710,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 40403,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 41371,
+          "duration_ms": 1148,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 43548,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 44758,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 46210,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 47419,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 48629,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 51048,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 52258,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 52258,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 52258,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 53710,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 54677,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 56129,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 56129,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 56129,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 56129,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 57823,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 59032,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 60242,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 61694,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G5",
+          "timestamp_ms": 63871,
+          "duration_ms": 1209,
+          "velocity": 0.63
+        }
+      ]
+    },
+    "groupe_3": {
+      "note_count": 76,
+      "notes": [
+        {
+          "note": "F#4",
+          "timestamp_ms": 484,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 1210,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 2177,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 2903,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 3871,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 4597,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 5323,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 6290,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 7016,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 7984,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 8710,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 9677,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 9677,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 9677,
+          "duration_ms": 3871,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 10403,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 11129,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 12097,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 12823,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 13790,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 14516,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 15484,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 15484,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 15484,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 16210,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 16935,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 17903,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 18629,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 19597,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 20323,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 21290,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "E2",
+          "timestamp_ms": 21290,
+          "duration_ms": 1935,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 22016,
+          "duration_ms": 229,
+          "velocity": 0.5
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 22742,
+          "duration_ms": 459,
+          "velocity": 0.5
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 23710,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 24435,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 25403,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 26129,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 27097,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 27823,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 28548,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 29516,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 31210,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 32419,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 33145,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 35323,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 36532,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 37500,
+          "duration_ms": 918,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 39194,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 40645,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 40645,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A2",
+          "timestamp_ms": 40645,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 40645,
+          "duration_ms": 3871,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 42581,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 42581,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 44274,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 45242,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 46452,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 46452,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 46452,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 46452,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 48145,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 49113,
+          "duration_ms": 1148,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 51290,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 52500,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 53952,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "D5",
+          "timestamp_ms": 55161,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "B4",
+          "timestamp_ms": 56371,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "C5",
+          "timestamp_ms": 58065,
+          "duration_ms": 459,
+          "velocity": 0.63
+        },
+        {
+          "note": "E4",
+          "timestamp_ms": 58065,
+          "duration_ms": 1838,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 59758,
+          "duration_ms": 229,
+          "velocity": 0.63
+        },
+        {
+          "note": "G4",
+          "timestamp_ms": 60726,
+          "duration_ms": 689,
+          "velocity": 0.63
+        },
+        {
+          "note": "D2",
+          "timestamp_ms": 61935,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 61935,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#4",
+          "timestamp_ms": 61935,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "A4",
+          "timestamp_ms": 61935,
+          "duration_ms": 1935,
+          "velocity": 0.63
+        },
+        {
+          "note": "E5",
+          "timestamp_ms": 65081,
+          "duration_ms": 241,
+          "velocity": 0.63
+        }
+      ]
+    },
+    "groupe_4": {
+      "note_count": 43,
+      "notes": [
+        {
+          "note": "D3",
+          "timestamp_ms": 16000,
+          "duration_ms": 711,
+          "velocity": 0.5
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 16750,
+          "duration_ms": 1186,
+          "velocity": 0.5
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 18000,
+          "duration_ms": 711,
+          "velocity": 0.5
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 18750,
+          "duration_ms": 1186,
+          "velocity": 0.5
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 20000,
+          "duration_ms": 711,
+          "velocity": 0.5
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 20750,
+          "duration_ms": 1186,
+          "velocity": 0.5
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 22000,
+          "duration_ms": 711,
+          "velocity": 0.5
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 22750,
+          "duration_ms": 1186,
+          "velocity": 0.5
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 24000,
+          "duration_ms": 711,
+          "velocity": 0.63
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 24750,
+          "duration_ms": 1186,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 26000,
+          "duration_ms": 711,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 26750,
+          "duration_ms": 1186,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 28000,
+          "duration_ms": 711,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 28750,
+          "duration_ms": 1186,
+          "velocity": 0.63
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 30000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "G3",
+          "timestamp_ms": 30000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 32000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#3",
+          "timestamp_ms": 32000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 34000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 35000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 36000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 38000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 40000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#3",
+          "timestamp_ms": 40000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 42000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 43000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 44000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 46000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 48000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#3",
+          "timestamp_ms": 48000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 50000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 51000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 52000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 54000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "D3",
+          "timestamp_ms": 56000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#3",
+          "timestamp_ms": 56000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 58000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "C4",
+          "timestamp_ms": 59000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 60000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "E3",
+          "timestamp_ms": 62000,
+          "duration_ms": 1899,
+          "velocity": 0.63
+        },
+        {
+          "note": "F#3",
+          "timestamp_ms": 64000,
+          "duration_ms": 474,
+          "velocity": 0.63
+        },
+        {
+          "note": "D4",
+          "timestamp_ms": 64500,
+          "duration_ms": 474,
+          "velocity": 0.63
+        },
+        {
+          "note": "A3",
+          "timestamp_ms": 65000,
+          "duration_ms": 949,
+          "velocity": 0.63
+        }
+      ]
+    }
+  }
+}
