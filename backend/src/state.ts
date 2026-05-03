@@ -1,16 +1,16 @@
 import type {
-  AppStage,
-  AudioMode,
+  AppPhase,
   GroupScore,
   NormalizedScore,
   NoteJudgement,
   PartPublicRoom,
   PerformanceStatus,
   PublicState,
-  QAQuestion,
   ScoreId,
-  StudentPublicSession
+  StudentPublicSession,
+  SurveyResults
 } from "@classe-orchestre/shared";
+import { SURVEY_QUESTIONS } from "@classe-orchestre/shared";
 
 export type StudentSession = {
   studentId: string;
@@ -20,8 +20,6 @@ export type StudentSession = {
   partId?: string;
   joinedAt: number;
   lastSeenAt: number;
-  ready: boolean;
-  isSpeaker: boolean;
 };
 
 export type PartRoom = {
@@ -37,6 +35,7 @@ export type ServerConnection = {
   connectionId: string;
   ws: {
     send(data: string): void;
+    close?(): void;
   };
   role?: "student" | "admin";
   sessionToken?: string;
@@ -56,12 +55,10 @@ export type InputEventRecord = {
 };
 
 export type RuntimeState = {
-  stage: AppStage;
+  phase: AppPhase;
   performanceStatus: PerformanceStatus;
+  performanceStartAtServerMs?: number;
   currentScoreId?: ScoreId;
-  startAtServerMs?: number;
-  audioMode: AudioMode;
-  allowOverflow: boolean;
 
   students: Map<string, StudentSession>;
   connections: Map<string, ServerConnection>;
@@ -73,7 +70,11 @@ export type RuntimeState = {
   judgements: Map<string, NoteJudgement>;
   groupScores: Map<string, GroupScore>;
   globalScore: number;
-  questions: QAQuestion[];
+
+  mutedGroups: Set<string>;
+  activeKeysByStudent: Map<string, Set<number>>;
+  surveyAnswers: Map<string, Map<string, string>>;
+
   performanceTimers: ReturnType<typeof setTimeout>[];
 };
 
@@ -97,11 +98,8 @@ export function createRuntimeState(
   }
 
   return {
-    stage: "lobby",
+    phase: "phase1_lobby",
     performanceStatus: "idle",
-    currentScoreId: "piano_only",
-    audioMode: "local_immediate",
-    allowOverflow: false,
     students: new Map(),
     connections: new Map(),
     parts,
@@ -110,38 +108,55 @@ export function createRuntimeState(
     judgements: new Map(),
     groupScores: new Map(),
     globalScore: 0,
-    questions: [],
+    mutedGroups: new Set(),
+    activeKeysByStudent: new Map(),
+    surveyAnswers: new Map(),
     performanceTimers: []
   };
 }
 
-export function resolveScoreIdForStage(stage: AppStage): ScoreId | undefined {
-  if (stage.startsWith("piano_")) {
-    return "piano_only";
+export function resetRuntimeState(state: RuntimeState): void {
+  for (const timer of state.performanceTimers) {
+    clearTimeout(timer);
   }
+  state.performanceTimers = [];
 
-  if (stage.startsWith("orchestra_")) {
-    return "orchestre";
+  state.phase = "phase1_lobby";
+  state.performanceStatus = "idle";
+  state.performanceStartAtServerMs = undefined;
+  state.currentScoreId = undefined;
+  state.students.clear();
+  for (const room of state.parts.values()) {
+    room.students = [];
   }
-
-  return undefined;
+  state.inputs.clear();
+  state.judgements.clear();
+  state.groupScores.clear();
+  state.globalScore = 0;
+  state.mutedGroups.clear();
+  state.activeKeysByStudent.clear();
+  state.surveyAnswers.clear();
 }
 
 export function publicState(state: RuntimeState): PublicState {
   return {
-    stage: state.stage,
+    phase: state.phase,
     performanceStatus: state.performanceStatus,
+    performanceStartAtServerMs: state.performanceStartAtServerMs,
     currentScoreId: state.currentScoreId,
-    startAtServerMs: state.startAtServerMs,
-    audioMode: state.audioMode,
-    groupSize: Math.max(1, firstPartMaxSize(state)),
-    allowOverflow: state.allowOverflow,
     scores: state.scores,
     parts: Array.from(state.parts.values()).map(toPublicPartRoom),
     students: Array.from(state.students.values()).map((student) =>
       toPublicStudentSession(state, student)
     ),
-    questions: state.questions,
+    mutedGroups: Array.from(state.mutedGroups),
+    activeKeysByStudent: Object.fromEntries(
+      Array.from(state.activeKeysByStudent.entries()).map(([studentId, midis]) => [
+        studentId,
+        Array.from(midis)
+      ])
+    ),
+    surveyResults: computeSurveyResults(state),
     groupScores: Array.from(state.groupScores.values()),
     globalScore: state.globalScore
   };
@@ -179,8 +194,7 @@ export function getPartForStudent(
 export function assignStudentToPart(
   state: RuntimeState,
   student: StudentSession,
-  partId: string,
-  options: { enforceCapacity: boolean }
+  partId: string
 ): { ok: true } | { ok: false; message: string } {
   const room = state.parts.get(partId);
   if (!room) {
@@ -188,8 +202,6 @@ export function assignStudentToPart(
   }
 
   if (
-    options.enforceCapacity &&
-    !state.allowOverflow &&
     room.students.length >= room.maxSize &&
     !room.students.includes(student.studentId)
   ) {
@@ -199,7 +211,6 @@ export function assignStudentToPart(
   removeStudentFromRooms(state, student.studentId);
   room.students.push(student.studentId);
   student.partId = partId;
-  student.ready = false;
   student.lastSeenAt = Date.now();
 
   return { ok: true };
@@ -213,7 +224,6 @@ export function removeStudentFromRooms(state: RuntimeState, studentId: string): 
   const student = getStudentById(state, studentId);
   if (student) {
     student.partId = undefined;
-    student.ready = false;
   }
 }
 
@@ -264,12 +274,28 @@ function toPublicStudentSession(
     partId: student.partId,
     joinedAt: student.joinedAt,
     lastSeenAt: student.lastSeenAt,
-    ready: student.ready,
-    isSpeaker: student.isSpeaker,
     online
   };
 }
 
-function firstPartMaxSize(state: RuntimeState): number {
-  return Array.from(state.parts.values())[0]?.maxSize ?? 4;
+function computeSurveyResults(state: RuntimeState): SurveyResults {
+  const results: SurveyResults = {};
+  for (const question of SURVEY_QUESTIONS) {
+    const counts: Record<string, number> = {};
+    for (const answer of question.answers) {
+      counts[answer.id] = 0;
+    }
+    results[question.id] = counts;
+  }
+
+  for (const studentAnswers of state.surveyAnswers.values()) {
+    for (const [questionId, answerId] of studentAnswers.entries()) {
+      const counts = results[questionId];
+      if (counts && answerId in counts) {
+        counts[answerId] += 1;
+      }
+    }
+  }
+
+  return results;
 }

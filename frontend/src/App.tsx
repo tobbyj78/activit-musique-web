@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminPage } from "./pages/AdminPage";
 import { LandingPage } from "./pages/LandingPage";
 import { StudentPage } from "./pages/StudentPage";
 import { AudioEngine } from "./audio/AudioEngine";
+import { ORCHESTRA_PRESET_KEYS } from "./audio/instrumentPresets";
 import { useRealtime } from "./realtime/useRealtime";
 
 export function App() {
@@ -10,22 +11,31 @@ export function App() {
   const audioEngine = useMemo(() => new AudioEngine(), []);
   const [audioReady, setAudioReady] = useState(false);
 
-  const unlockAudio = async () => {
-    await audioEngine.unlock();
-    setAudioReady(true);
-  };
+  useEffect(() => {
+    if (realtime.role !== "admin" || !audioReady) return;
+    void audioEngine.preloadPreset("piano").catch(() => undefined);
+  }, [audioEngine, audioReady, realtime.role]);
+
+  useEffect(() => {
+    if (realtime.role !== "admin" || !audioReady) return;
+    const phase = realtime.state?.phase;
+    if (
+      phase === "phase6_orchestra_groups" ||
+      phase === "phase7_orchestra_practice" ||
+      phase === "phase8_orchestra_performance"
+    ) {
+      for (const key of ORCHESTRA_PRESET_KEYS) {
+        void audioEngine.preloadPreset(key).catch(() => undefined);
+      }
+    }
+  }, [audioEngine, audioReady, realtime.role, realtime.state?.phase]);
 
   if (!realtime.role || !realtime.state) {
     return (
       <LandingPage
         status={realtime.status}
         error={realtime.error}
-        onEnter={async (entry) => {
-          try {
-            await unlockAudio();
-          } catch {
-            setAudioReady(false);
-          }
+        onEnter={(entry) => {
           realtime.connect(entry);
         }}
       />
@@ -39,6 +49,14 @@ export function App() {
         status={realtime.status}
         error={realtime.error}
         send={realtime.send}
+        audioEngine={audioEngine}
+        audioReady={audioReady}
+        serverTimeOffsetMs={realtime.serverTimeOffsetMs}
+        groupNotes={realtime.groupNotes}
+        onUnlockAudio={async () => {
+          await audioEngine.unlock();
+          setAudioReady(true);
+        }}
       />
     );
   }
@@ -51,11 +69,6 @@ export function App() {
       connectionId={realtime.connectionId}
       serverTimeOffsetMs={realtime.serverTimeOffsetMs}
       send={realtime.send}
-      audioEngine={audioEngine}
-      audioReady={audioReady}
-      onUnlockAudio={unlockAudio}
-      groupNotes={realtime.groupNotes}
-      latestJudgement={realtime.latestJudgement}
     />
   );
 }

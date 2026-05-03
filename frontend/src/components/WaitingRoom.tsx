@@ -1,23 +1,13 @@
-import type { AppStage } from "@classe-orchestre/shared";
-
 type WaitingRoomProps = {
-  stage: AppStage;
-  partName: string;
-  ready: boolean;
-  onReady(ready: boolean): void;
+  title: string;
+  subtitle?: string;
 };
 
-export function WaitingRoom({ stage, partName, ready, onReady }: WaitingRoomProps) {
+export function WaitingRoom({ title, subtitle }: WaitingRoomProps) {
   return (
     <section className="waiting-room">
-      <p className="eyebrow">{stage}</p>
-      <h2>{partName}</h2>
-      <button
-        className={ready ? "ready-button is-active" : "ready-button"}
-        onClick={() => onReady(!ready)}
-      >
-        {ready ? "Pret" : "Je suis pret"}
-      </button>
+      <h2>{title}</h2>
+      {subtitle ? <p>{subtitle}</p> : null}
     </section>
   );
 }

@@ -34,7 +34,6 @@ export function recomputeScores(
       judgedNotes: countJudgements(state, students, expectedNotes),
       expectedNotes: expectedNotes.length,
       activeStudents: students.length,
-      incomplete: students.length > 0 && students.length < firstRoomMaxSize(state),
       studentScores
     };
   });
@@ -54,26 +53,29 @@ export function recomputeScores(
   return { groupScores, globalScore };
 }
 
-export function aggregateGroupNoteScore(
+export function countCorrectPressers(
   state: RuntimeState,
   partId: string,
-  noteId: string
-): { score: number; activeStudents: number } {
+  note: ScheduledNote,
+  expectedAtServerMs: number
+): number {
   const students = activeStudentsForPart(state, partId);
   if (students.length === 0) {
-    return { score: 0, activeStudents: 0 };
+    return 0;
   }
 
-  const total = students.reduce(
-    (sum, student) =>
-      sum + (state.judgements.get(judgementKey(student.studentId, noteId))?.totalScore ?? 0),
-    0
-  );
+  const studentIds = new Set(students.map((student) => student.studentId));
+  const matchingStudents = new Set<string>();
 
-  return {
-    score: total / students.length,
-    activeStudents: students.length
-  };
+  for (const event of state.inputs.values()) {
+    if (!studentIds.has(event.studentId)) continue;
+    if (event.partId !== partId) continue;
+    if (event.midi !== note.midi) continue;
+    if (Math.abs(event.serverDownAtMs - expectedAtServerMs) > MISS_WINDOW_MS) continue;
+    matchingStudents.add(event.studentId);
+  }
+
+  return matchingStudents.size;
 }
 
 export function judgementKey(studentId: string, noteId: string): string {
@@ -85,13 +87,13 @@ function expectedNotesForState(
   notes: ScheduledNote[],
   nowMs: number
 ): ScheduledNote[] {
-  if (!state.startAtServerMs) {
+  if (!state.performanceStartAtServerMs) {
     return notes.filter((note) =>
       Array.from(state.judgements.values()).some((judgement) => judgement.noteId === note.id)
     );
   }
 
-  const elapsedMs = Math.max(0, nowMs - state.startAtServerMs);
+  const elapsedMs = Math.max(0, nowMs - state.performanceStartAtServerMs);
   const cutoffMs =
     state.performanceStatus === "finished" || state.performanceStatus === "stopped"
       ? elapsedMs
@@ -146,8 +148,4 @@ function countJudgements(
     }
   }
   return count;
-}
-
-function firstRoomMaxSize(state: RuntimeState): number {
-  return Array.from(state.parts.values())[0]?.maxSize ?? 4;
 }

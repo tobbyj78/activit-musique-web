@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { LogIn, Radio } from "lucide-react";
+import { LogIn, Music } from "lucide-react";
 
 type LandingPageProps = {
   status: string;
@@ -18,38 +18,46 @@ export function LandingPage({ status, error, onEnter }: LandingPageProps) {
     if (!value) {
       return;
     }
-
     await onEnter(value);
   };
+
+  const partyInProgress = error?.includes("partie est en cours");
 
   return (
     <main className="landing-shell">
       <section className="landing-panel">
         <div className="brand-mark">
-          <Radio size={28} />
+          <Music size={28} />
           <span>Classe Orchestre</span>
         </div>
-        <h1>Pupitre numerique de salle de concert</h1>
-        <form onSubmit={submit} className="entry-form">
-          <label htmlFor="entry">Nom eleve ou code admin</label>
-          <input
-            id="entry"
-            autoFocus
-            value={entry}
-            onChange={(event) => setEntry(event.target.value)}
-            placeholder="Votre nom"
-            autoComplete="name"
-          />
-          <button type="submit" disabled={status === "connecting"}>
-            <LogIn size={20} />
-            <span>{status === "connecting" ? "Connexion..." : "Entrer"}</span>
-          </button>
-          <p className="form-help">
-            Pour jouer, entrez un prenom. Pour la regie, entrez le mot de passe
-            admin.
-          </p>
-        </form>
-        {error ? <p className="status-line error">{error}</p> : null}
+        {partyInProgress ? (
+          <div className="party-locked">
+            <h1>Une partie est en cours</h1>
+            <p>
+              Les nouveaux participants ne peuvent rejoindre qu'au début d'une
+              session. Attends que l'administrateur revienne à l'accueil.
+            </p>
+          </div>
+        ) : (
+          <>
+            <h1>Entre ton prénom</h1>
+            <form onSubmit={submit} className="entry-form">
+              <input
+                id="entry"
+                autoFocus
+                value={entry}
+                onChange={(event) => setEntry(event.target.value)}
+                placeholder="Ton prénom"
+                autoComplete="given-name"
+              />
+              <button type="submit" disabled={status === "connecting" || !entry.trim()}>
+                <LogIn size={20} />
+                <span>{status === "connecting" ? "Connexion…" : "Entrer"}</span>
+              </button>
+            </form>
+            {error ? <p className="status-line error">{error}</p> : null}
+          </>
+        )}
       </section>
     </main>
   );

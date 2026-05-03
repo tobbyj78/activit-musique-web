@@ -1,23 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import type {
   ClientMessage,
-  NoteJudgement,
   PublicState,
-  ServerMessage
+  ScoreId
 } from "@classe-orchestre/shared";
 import { midiToNoteName } from "@classe-orchestre/shared";
-import { AudioEngine } from "../audio/AudioEngine";
 import { GroupPicker } from "../components/GroupPicker";
 import { MiniKeyboard } from "../components/MiniKeyboard";
 import { NoteHighway } from "../components/NoteHighway";
-import { QAView } from "../components/QAView";
+import { Survey } from "../components/Survey";
 import { WaitingRoom } from "../components/WaitingRoom";
 import { makeEventId } from "../realtime/socket";
-
-type GroupPlayNote = Extract<ServerMessage, { type: "group_play_note" }> & {
-  receivedAt: number;
-  key: string;
-};
 
 type StudentPageProps = {
   state: PublicState;
@@ -26,101 +19,57 @@ type StudentPageProps = {
   connectionId?: string;
   serverTimeOffsetMs: number;
   send(message: ClientMessage): void;
-  audioEngine: AudioEngine;
-  audioReady: boolean;
-  onUnlockAudio(): Promise<void>;
-  groupNotes: GroupPlayNote[];
-  latestJudgement?: NoteJudgement;
 };
+
+function activeScoreIdForPhase(phase: PublicState["phase"]): ScoreId | undefined {
+  switch (phase) {
+    case "phase2_groups":
+    case "phase3_practice":
+    case "phase4_performance":
+      return "piano_only";
+    case "phase6_orchestra_groups":
+    case "phase7_orchestra_practice":
+    case "phase8_orchestra_performance":
+      return "orchestre";
+    default:
+      return undefined;
+  }
+}
 
 export function StudentPage({
   state,
-  status,
-  error,
-  connectionId,
   serverTimeOffsetMs,
-  send,
-  audioEngine,
-  audioReady,
-  onUnlockAudio,
-  groupNotes,
-  latestJudgement
+  connectionId,
+  send
 }: StudentPageProps) {
   const activeEventsRef = useRef(new Map<number, string>());
-  const playedGroupNotesRef = useRef(new Set<string>());
-  const [audioDebug, setAudioDebug] = useState<string>();
-  const student = state.students.find((candidate) => candidate.connectionId === connectionId);
-  const scoreId = state.currentScoreId ?? "piano_only";
-  const score = state.scores[scoreId];
-  const part = useMemo(
-    () => score.parts.find((candidate) => candidate.id === student?.partId),
-    [score.parts, student?.partId]
+  const student = state.students.find(
+    (candidate) => candidate.connectionId === connectionId
   );
-  const isPractice =
-    state.stage === "piano_practice" || state.stage === "orchestra_practice";
-  const isPerformance =
-    state.stage === "piano_performance" || state.stage === "orchestra_performance";
-  const isQa = state.stage === "piano_qa" || state.stage === "orchestra_qa";
 
-  useEffect(() => {
-    if (part) {
-      audioEngine.preloadPreset(part.soundPresetKey).catch(() => undefined);
-    }
-  }, [audioEngine, part]);
-
-  useEffect(() => {
-    if (!part || state.audioMode !== "server_aggregated") {
-      return;
-    }
-
-    for (const note of groupNotes) {
-      if (note.partId !== part.id || playedGroupNotesRef.current.has(note.key)) {
-        continue;
-      }
-
-      playedGroupNotesRef.current.add(note.key);
-      audioEngine
-        .schedule({
-          presetKey: note.presetKey,
-          midi: note.midi,
-          durationMs: note.durationMs,
-          velocity: note.velocity,
-          playAtServerMs: note.playAtServerMs,
-          serverTimeOffsetMs
-        })
-        .catch(() => undefined);
-    }
-  }, [audioEngine, groupNotes, part, serverTimeOffsetMs, state.audioMode]);
+  const studentRoom = state.parts.find((room) =>
+    student?.partId ? room.partId === student.partId : false
+  );
+  const studentScoreId = studentRoom?.scoreId;
+  const score = studentScoreId ? state.scores[studentScoreId] : undefined;
+  const part = useMemo(
+    () => score?.parts.find((candidate) => candidate.id === student?.partId),
+    [score?.parts, student?.partId]
+  );
 
   const handleInputDown = (midi: number) => {
-    if (!part) {
-      return;
-    }
-
     const eventId = makeEventId("input");
     const now = Date.now();
-    const note = midiToNoteName(midi);
     activeEventsRef.current.set(midi, eventId);
 
     send({
       type: "input_down",
       eventId,
-      note,
+      note: midiToNoteName(midi),
       midi,
       clientEventAtMs: now,
       estimatedServerEventAtMs: now + serverTimeOffsetMs
     });
-
-    if (isPractice || (isPerformance && state.audioMode === "local_immediate")) {
-      audioEngine
-        .playNow({
-          presetKey: part.soundPresetKey,
-          midi,
-          durationMs: 300,
-          velocity: 0.55
-        })
-        .catch(() => undefined);
-    }
   };
 
   const handleInputUp = (midi: number) => {
@@ -128,7 +77,6 @@ export function StudentPage({
     if (!eventId) {
       return;
     }
-
     activeEventsRef.current.delete(midi);
     const now = Date.now();
     send({
@@ -141,159 +89,152 @@ export function StudentPage({
     });
   };
 
-  const testSound = () => {
-    const debug = audioEngine.playTestToneNow();
-    setAudioDebug(
-      `Audio: ${debug.contextState}, t=${debug.currentTime.toFixed(2)}${
-        debug.error ? `, ${debug.error}` : ""
-      }`
-    );
-    void onUnlockAudio().catch((error) => {
-      setAudioDebug(
-        `Audio: erreur, ${error instanceof Error ? error.message : "inconnue"}`
-      );
-    });
-    if (part) {
-      void audioEngine.playNow({
-        presetKey: part.soundPresetKey,
-        midi: part.lanes[0]?.midi ?? 72,
-        durationMs: 500,
-        velocity: 0.75
-      });
-    }
-  };
-
   if (!student) {
     return (
-      <main className="app-shell student-shell">
-        <div className="panel centered-panel">Connexion eleve en cours...</div>
+      <main className="student-shell">
+        <div className="centered-panel">Connexion en cours…</div>
       </main>
     );
   }
 
-  if (isQa) {
+  const phase = state.phase;
+
+  if (phase === "phase1_lobby") {
     return (
-      <main className="app-shell student-shell">
-        <StudentHeader
-          name={student.name}
-          partName={part?.displayName}
-          status={status}
-          error={error}
-        />
-        <section className="panel">
-          <QAView
-            role="student"
-            questions={state.questions}
-            onSubmit={(text) =>
-              send({
-                type: "qa_submit_question",
-                text
-              })
-            }
-          />
-        </section>
-      </main>
-    );
-  }
-
-  if (!part) {
-    return (
-      <main className="app-shell student-shell">
-        <StudentHeader name={student.name} status={status} error={error} />
-        <GroupPicker
-          score={score}
-          rooms={state.parts}
-          students={state.students}
-          selectedPartId={student.partId}
-          onJoin={(partId) =>
-            send({
-              type: "join_part",
-              partId
-            })
-          }
-        />
-      </main>
-    );
-  }
-
-  return (
-    <main className="app-shell student-shell performance-layout">
-      <StudentHeader
-        name={student.name}
-        partName={part.displayName}
-        status={status}
-        error={error}
-      />
-
-      <div className="audio-actions">
-        {!audioReady ? (
-          <button onClick={onUnlockAudio}>Activer le son</button>
-        ) : null}
-        <button onClick={testSound}>Tester le son</button>
-        {audioDebug ? <span>{audioDebug}</span> : null}
-      </div>
-
-      {isPerformance && state.startAtServerMs ? (
-        <NoteHighway
-          part={part}
-          startAtServerMs={state.startAtServerMs}
-          serverTimeOffsetMs={serverTimeOffsetMs}
-          leadTimeMs={3000}
-        />
-      ) : (
+      <main className="student-shell">
+        <header className="student-header-phone">
+          <h1>{student.name}</h1>
+        </header>
         <WaitingRoom
-          stage={state.stage}
-          partName={part.displayName}
-          ready={student.ready}
-          onReady={(ready) =>
-            send({
-              type: "ready",
-              ready
-            })
+          title="En attente de l'administrateur"
+          subtitle="La session va commencer."
+        />
+      </main>
+    );
+  }
+
+  if (phase === "phase5_survey" || phase === "phase9_orchestra_survey") {
+    return (
+      <main className="student-shell">
+        <header className="student-header-phone">
+          <h1>{student.name}</h1>
+        </header>
+        <Survey
+          onSubmit={(questionId, answerId) =>
+            send({ type: "student_submit_answer", questionId, answerId })
           }
         />
-      )}
+      </main>
+    );
+  }
 
-      {(isPractice || isPerformance) && (
+  // phase 2/3/4 (piano) OR phase 6/7/8 (orchestra)
+
+  const targetScoreId = activeScoreIdForPhase(phase);
+  const targetScore = targetScoreId ? state.scores[targetScoreId] : undefined;
+
+  const isGroupsPhase =
+    phase === "phase2_groups" || phase === "phase6_orchestra_groups";
+  const isPracticePhase =
+    phase === "phase3_practice" || phase === "phase7_orchestra_practice";
+  const isPerformancePhase =
+    phase === "phase4_performance" || phase === "phase8_orchestra_performance";
+
+  if (isGroupsPhase) {
+    if (!part || studentScoreId !== targetScoreId) {
+      return (
+        <main className="student-shell">
+          <header className="student-header-phone">
+            <h1>{student.name}</h1>
+          </header>
+          <GroupPicker
+            parts={targetScore?.parts ?? []}
+            rooms={state.parts.filter((room) => room.scoreId === targetScoreId)}
+            students={state.students}
+            selectedPartId={undefined}
+            onJoin={(partId) => send({ type: "join_part", partId })}
+          />
+        </main>
+      );
+    }
+    return (
+      <main className="student-shell">
+        <header className="student-header-phone">
+          <p className="eyebrow">{part.displayName}</p>
+          <h1>{student.name}</h1>
+        </header>
+        <WaitingRoom
+          title={`Tu es dans ${part.displayName}`}
+          subtitle="En attente des autres élèves."
+        />
+      </main>
+    );
+  }
+
+  if (!part || studentScoreId !== targetScoreId) {
+    return (
+      <main className="student-shell">
+        <header className="student-header-phone">
+          <h1>{student.name}</h1>
+        </header>
+        <WaitingRoom
+          title="Pas de groupe"
+          subtitle="Tu n'as pas de groupe pour cette partie."
+        />
+      </main>
+    );
+  }
+
+  if (isPracticePhase) {
+    return (
+      <main className="student-shell student-keyboard-only">
+        <header className="student-header-phone">
+          <p className="eyebrow">{part.displayName}</p>
+          <h1>{student.name}</h1>
+        </header>
+        <div className="practice-zone">
+          <p className="practice-hint">Joue librement</p>
+        </div>
         <MiniKeyboard
           lanes={part.lanes}
           presetKey={part.soundPresetKey}
-          mode={isPractice ? "practice" : "performance"}
           onInputDown={handleInputDown}
           onInputUp={handleInputUp}
         />
-      )}
+      </main>
+    );
+  }
 
-      {latestJudgement ? (
-        <div className={`judgement-toast ${latestJudgement.label}`}>
-          {latestJudgement.label} - {Math.round(latestJudgement.totalScore * 100)}%
-        </div>
-      ) : null}
-    </main>
-  );
-}
+  if (isPerformancePhase) {
+    return (
+      <main className="student-shell performance-layout">
+        <header className="student-header-phone compact">
+          <p className="eyebrow">{part.displayName}</p>
+          <span>{student.name}</span>
+        </header>
+        {state.performanceStartAtServerMs ? (
+          <NoteHighway
+            part={part}
+            startAtServerMs={state.performanceStartAtServerMs}
+            serverTimeOffsetMs={serverTimeOffsetMs}
+            leadTimeMs={3000}
+          />
+        ) : (
+          <WaitingRoom title="Préparation…" />
+        )}
+        <MiniKeyboard
+          lanes={part.lanes}
+          presetKey={part.soundPresetKey}
+          onInputDown={handleInputDown}
+          onInputUp={handleInputUp}
+        />
+      </main>
+    );
+  }
 
-function StudentHeader({
-  name,
-  partName,
-  status,
-  error
-}: {
-  name: string;
-  partName?: string;
-  status: string;
-  error?: string;
-}) {
   return (
-    <header className="student-header">
-      <div>
-        <p className="eyebrow">{partName ?? "Choix du groupe"}</p>
-        <h1>{name}</h1>
-      </div>
-      <div className="connection-pill" data-state={status}>
-        {status}
-      </div>
-      {error ? <p className="status-line error">{error}</p> : null}
-    </header>
+    <main className="student-shell">
+      <div className="centered-panel">…</div>
+    </main>
   );
 }

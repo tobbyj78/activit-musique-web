@@ -1,5 +1,6 @@
 import {
   parseClientMessage,
+  type AppPhase,
   type ClientMessage,
   type NoteJudgement,
   type ScheduledNote,
@@ -15,16 +16,14 @@ import {
   clearPerformanceTimers,
   getPartForStudent,
   getStudentByConnectionId,
-  getStudentById,
   publicState,
-  removeStudentFromRooms,
-  resolveScoreIdForStage,
+  resetRuntimeState,
   type RuntimeState,
   type InputEventRecord,
   type StudentSession
 } from "./state";
 import {
-  aggregateGroupNoteScore,
+  countCorrectPressers,
   judgementKey,
   recomputeScores
 } from "./scoring/aggregate";
@@ -35,10 +34,55 @@ import { safeJsonParse } from "./utils/safeJson";
 const DISCONNECT_GRACE_MS = 30_000;
 const JUDGE_DELAY_MS = 140;
 const OUTPUT_DELAY_MS = 220;
+const LIVE_PLAY_DELAY_MS = 30;
+const LIVE_PLAY_DURATION_MS = 700;
+const LIVE_PLAY_VELOCITY = 0.7;
+const COUNTDOWN_MS = 3000;
+const STATE_COALESCE_MS = 30;
+
+type PerformanceMode = "voted" | "always";
 
 type HonoLike = {
   get(path: string, ...handlers: any[]): unknown;
 };
+
+let stateBroadcastTimer: ReturnType<typeof setTimeout> | undefined;
+
+function isPracticePhase(phase: AppPhase): boolean {
+  return phase === "phase3_practice" || phase === "phase7_orchestra_practice";
+}
+
+function isPerformancePhase(phase: AppPhase): boolean {
+  return phase === "phase4_performance" || phase === "phase8_orchestra_performance";
+}
+
+function isGroupPickPhase(phase: AppPhase): boolean {
+  return phase === "phase2_groups" || phase === "phase6_orchestra_groups";
+}
+
+function isSurveyPhase(phase: AppPhase): boolean {
+  return phase === "phase5_survey" || phase === "phase9_orchestra_survey";
+}
+
+function scoreIdForPhase(phase: AppPhase): ScoreId | undefined {
+  if (
+    phase === "phase2_groups" ||
+    phase === "phase3_practice" ||
+    phase === "phase4_performance" ||
+    phase === "phase5_survey"
+  ) {
+    return "piano_only";
+  }
+  if (
+    phase === "phase6_orchestra_groups" ||
+    phase === "phase7_orchestra_practice" ||
+    phase === "phase8_orchestra_performance" ||
+    phase === "phase9_orchestra_survey"
+  ) {
+    return "orchestre";
+  }
+  return undefined;
+}
 
 export function registerWebSocket(app: HonoLike, state: RuntimeState): void {
   app.get(
@@ -47,7 +91,7 @@ export function registerWebSocket(app: HonoLike, state: RuntimeState): void {
       const connectionId = createId("conn");
 
       return {
-        onOpen: (_event: Event, ws: { send(data: string): void }) => {
+        onOpen: (_event: Event, ws: { send(data: string): void; close?(): void }) => {
           state.connections.set(connectionId, {
             connectionId,
             ws,
@@ -108,7 +152,7 @@ function handleMessage(
   if (!connection?.role) {
     sendToConnection(state, connectionId, {
       type: "error",
-      message: "Connexion non initialisee."
+      message: "Connexion non initialisée."
     });
     return;
   }
@@ -124,9 +168,23 @@ function handleMessage(
       break;
     case "join_part":
       withStudent(state, connectionId, (student) => {
-        const result = assignStudentToPart(state, student, message.partId, {
-          enforceCapacity: true
-        });
+        if (!isGroupPickPhase(state.phase)) {
+          sendToConnection(state, connectionId, {
+            type: "error",
+            message: "Choix de groupe indisponible."
+          });
+          return;
+        }
+        const expectedScoreId = scoreIdForPhase(state.phase);
+        const room = state.parts.get(message.partId);
+        if (!room || room.scoreId !== expectedScoreId) {
+          sendToConnection(state, connectionId, {
+            type: "error",
+            message: "Groupe invalide pour cette phase."
+          });
+          return;
+        }
+        const result = assignStudentToPart(state, student, message.partId);
         if (!result.ok) {
           sendToConnection(state, connectionId, {
             type: "error",
@@ -139,14 +197,13 @@ function handleMessage(
       break;
     case "leave_part":
       withStudent(state, connectionId, (student) => {
-        removeStudentFromRooms(state, student.studentId);
-        broadcastState(state);
-      });
-      break;
-    case "ready":
-      withStudent(state, connectionId, (student) => {
-        student.ready = message.ready;
-        student.lastSeenAt = Date.now();
+        if (!isGroupPickPhase(state.phase)) {
+          return;
+        }
+        student.partId = undefined;
+        for (const room of state.parts.values()) {
+          room.students = room.students.filter((id) => id !== student.studentId);
+        }
         broadcastState(state);
       });
       break;
@@ -160,83 +217,39 @@ function handleMessage(
         handleInputUp(state, student, message);
       });
       break;
-    case "qa_submit_question":
+    case "student_submit_answer":
       withStudent(state, connectionId, (student) => {
-        state.questions.unshift({
-          id: createId("q"),
-          studentName: student.name,
-          text: message.text.trim(),
-          createdAt: Date.now(),
-          answered: false
-        });
-        broadcastState(state);
-      });
-      break;
-    case "admin_set_stage":
-      withAdmin(state, connectionId, () => {
-        state.stage = message.stage;
-        state.currentScoreId = resolveScoreIdForStage(message.stage) ?? state.currentScoreId;
-        state.performanceStatus = "idle";
-        state.startAtServerMs = undefined;
-        clearPerformanceTimers(state);
-        broadcastState(state);
-      });
-      break;
-    case "admin_start_performance":
-      withAdmin(state, connectionId, () => {
-        startPerformance(state, message.scoreId, message.startDelayMs, message.audioMode);
-      });
-      break;
-    case "admin_stop":
-      withAdmin(state, connectionId, () => {
-        clearPerformanceTimers(state);
-        state.performanceStatus = "stopped";
-        state.startAtServerMs = undefined;
-        broadcastState(state);
-      });
-      break;
-    case "admin_set_overflow":
-      withAdmin(state, connectionId, () => {
-        state.allowOverflow = message.allowOverflow;
-        broadcastState(state);
-      });
-      break;
-    case "admin_assign_student":
-      withAdmin(state, connectionId, () => {
-        const student = getStudentById(state, message.studentId);
-        if (!student) {
-          sendToConnection(state, connectionId, {
-            type: "error",
-            message: "Eleve introuvable."
-          });
+        if (!isSurveyPhase(state.phase)) {
           return;
         }
-        const result = assignStudentToPart(state, student, message.partId, {
-          enforceCapacity: false
-        });
-        if (!result.ok) {
-          sendToConnection(state, connectionId, {
-            type: "error",
-            message: result.message
-          });
-          return;
+        let answers = state.surveyAnswers.get(student.studentId);
+        if (!answers) {
+          answers = new Map();
+          state.surveyAnswers.set(student.studentId, answers);
         }
-        broadcastState(state);
+        if (!answers.has(message.questionId)) {
+          answers.set(message.questionId, message.answerId);
+          broadcastState(state);
+        }
       });
       break;
-    case "admin_mark_question_answered":
+    case "admin_advance_phase":
       withAdmin(state, connectionId, () => {
-        state.questions = state.questions.map((question) =>
-          question.id === message.questionId
-            ? { ...question, answered: true }
-            : question
-        );
-        broadcastState(state);
+        advancePhase(state);
       });
       break;
-    case "admin_clear_questions":
+    case "admin_reset":
       withAdmin(state, connectionId, () => {
-        state.questions = [];
+        forceReset(state);
+      });
+      break;
+    case "admin_toggle_group_mute":
+      withAdmin(state, connectionId, () => {
+        if (state.mutedGroups.has(message.partId)) {
+          state.mutedGroups.delete(message.partId);
+        } else {
+          state.mutedGroups.add(message.partId);
+        }
         broadcastState(state);
       });
       break;
@@ -249,8 +262,7 @@ function handleHello(
   message: Extract<ClientMessage, { type: "hello" }>,
   ws: { send(data: string): void }
 ): void {
-  const connection = state.connections.get(connectionId);
-  if (!connection) {
+  if (!state.connections.has(connectionId)) {
     state.connections.set(connectionId, {
       connectionId,
       ws,
@@ -290,6 +302,15 @@ function handleHello(
   const restoredSession = message.sessionToken
     ? state.students.get(message.sessionToken)
     : undefined;
+
+  if (!restoredSession && state.phase !== "phase1_lobby") {
+    sendToConnection(state, connectionId, {
+      type: "error",
+      message: "Une partie est en cours. Les nouveaux joueurs ne peuvent rejoindre qu'au début."
+    });
+    return;
+  }
+
   const sessionToken = restoredSession?.sessionToken ?? createId("session");
   const student: StudentSession =
     restoredSession ??
@@ -299,9 +320,7 @@ function handleHello(
       sessionToken,
       name: message.name.trim(),
       joinedAt: now,
-      lastSeenAt: now,
-      ready: false,
-      isSpeaker: true
+      lastSeenAt: now
     };
 
   student.connectionId = connectionId;
@@ -353,8 +372,12 @@ function cleanupDisconnectedStudents(state: RuntimeState): void {
       student.connectionId && state.connections.has(student.connectionId)
     );
     if (!online && now - student.lastSeenAt > DISCONNECT_GRACE_MS) {
-      removeStudentFromRooms(state, student.studentId);
+      for (const room of state.parts.values()) {
+        room.students = room.students.filter((id) => id !== student.studentId);
+      }
       state.students.delete(sessionToken);
+      state.activeKeysByStudent.delete(student.studentId);
+      state.surveyAnswers.delete(student.studentId);
       changed = true;
     }
   }
@@ -364,19 +387,107 @@ function cleanupDisconnectedStudents(state: RuntimeState): void {
   }
 }
 
+function clearStudentGroupAssignments(state: RuntimeState): void {
+  for (const room of state.parts.values()) {
+    room.students = [];
+  }
+  for (const student of state.students.values()) {
+    student.partId = undefined;
+  }
+}
+
+function advancePhase(state: RuntimeState): void {
+  switch (state.phase) {
+    case "phase1_lobby":
+      state.phase = "phase2_groups";
+      broadcastState(state);
+      break;
+    case "phase2_groups":
+      state.phase = "phase3_practice";
+      state.activeKeysByStudent.clear();
+      broadcastState(state);
+      break;
+    case "phase3_practice":
+      state.phase = "phase4_performance";
+      state.activeKeysByStudent.clear();
+      startPerformance(state, "piano_only", COUNTDOWN_MS, "voted");
+      break;
+    case "phase4_performance":
+      clearPerformanceTimers(state);
+      state.performanceStatus = "finished";
+      state.phase = "phase5_survey";
+      state.surveyAnswers.clear();
+      broadcastState(state);
+      break;
+    case "phase5_survey":
+      // Move into the orchestra arc: regroup students and reset audio state.
+      clearPerformanceTimers(state);
+      clearStudentGroupAssignments(state);
+      state.activeKeysByStudent.clear();
+      state.mutedGroups.clear();
+      state.inputs.clear();
+      state.judgements.clear();
+      state.groupScores.clear();
+      state.globalScore = 0;
+      state.performanceStartAtServerMs = undefined;
+      state.currentScoreId = undefined;
+      state.performanceStatus = "idle";
+      state.phase = "phase6_orchestra_groups";
+      broadcastState(state);
+      break;
+    case "phase6_orchestra_groups":
+      state.phase = "phase7_orchestra_practice";
+      state.activeKeysByStudent.clear();
+      broadcastState(state);
+      break;
+    case "phase7_orchestra_practice":
+      state.phase = "phase8_orchestra_performance";
+      state.activeKeysByStudent.clear();
+      startPerformance(state, "orchestre", COUNTDOWN_MS, "always");
+      break;
+    case "phase8_orchestra_performance":
+      clearPerformanceTimers(state);
+      state.performanceStatus = "finished";
+      state.phase = "phase9_orchestra_survey";
+      state.surveyAnswers.clear();
+      broadcastState(state);
+      break;
+    case "phase9_orchestra_survey":
+      forceReset(state);
+      break;
+  }
+}
+
+function forceReset(state: RuntimeState): void {
+  for (const connection of Array.from(state.connections.values())) {
+    if (connection.role === "student") {
+      sendToConnection(state, connection.connectionId, {
+        type: "error",
+        message: "__RESET__"
+      });
+      try {
+        connection.ws.close?.();
+      } catch {
+        // ignore
+      }
+      state.connections.delete(connection.connectionId);
+    }
+  }
+
+  resetRuntimeState(state);
+  broadcastState(state);
+}
+
 function startPerformance(
   state: RuntimeState,
   scoreId: ScoreId,
   startDelayMs: number,
-  audioMode: "local_immediate" | "server_aggregated"
+  mode: PerformanceMode
 ): void {
   clearPerformanceTimers(state);
-  state.stage =
-    scoreId === "piano_only" ? "piano_performance" : "orchestra_performance";
-  state.currentScoreId = scoreId;
   state.performanceStatus = "countdown";
-  state.audioMode = audioMode;
-  state.startAtServerMs = Date.now() + startDelayMs;
+  state.currentScoreId = scoreId;
+  state.performanceStartAtServerMs = Date.now() + startDelayMs;
   state.inputs.clear();
   state.judgements.clear();
   state.groupScores.clear();
@@ -385,8 +496,7 @@ function startPerformance(
   broadcastToAll(state, {
     type: "performance_start",
     scoreId,
-    startAtServerMs: state.startAtServerMs,
-    audioMode
+    startAtServerMs: state.performanceStartAtServerMs
   });
   broadcastState(state);
 
@@ -397,9 +507,7 @@ function startPerformance(
     }, startDelayMs)
   );
 
-  if (audioMode === "server_aggregated") {
-    scheduleAggregatedPlayback(state, scoreId, state.startAtServerMs);
-  }
+  scheduleAggregatedPlayback(state, scoreId, state.performanceStartAtServerMs, mode);
 
   const score = state.scores[scoreId];
   state.performanceTimers.push(
@@ -414,7 +522,8 @@ function startPerformance(
 function scheduleAggregatedPlayback(
   state: RuntimeState,
   scoreId: ScoreId,
-  startAtServerMs: number
+  startAtServerMs: number,
+  mode: PerformanceMode
 ): void {
   const score = state.scores[scoreId];
   for (const part of score.parts) {
@@ -430,15 +539,36 @@ function scheduleAggregatedPlayback(
           ) {
             return;
           }
+          if (state.mutedGroups.has(part.id)) {
+            return;
+          }
 
-          const aggregate = aggregateGroupNoteScore(state, part.id, note.id);
-          const activeStudents = Math.max(1, aggregate.activeStudents);
-          const velocity = Math.min(
-            0.7,
-            Math.max(0, (note.velocity * aggregate.score) / activeStudents)
-          );
+          let velocity = note.velocity;
+          if (mode === "voted") {
+            const expectedAtServerMs = startAtServerMs + note.timestampMs;
+            const pressers = countCorrectPressers(
+              state,
+              part.id,
+              note,
+              expectedAtServerMs
+            );
+            if (pressers === 0) {
+              return;
+            }
+            const factor =
+              pressers === 1
+                ? 0.3
+                : pressers === 2
+                  ? 0.7
+                  : pressers === 3
+                    ? 0.9
+                    : 1;
+            velocity = Math.min(0.95, note.velocity * factor);
+          } else {
+            velocity = Math.min(0.95, note.velocity);
+          }
 
-          broadcastToPart(state, part.id, {
+          broadcastToAdmins(state, {
             type: "group_play_note",
             partId: part.id,
             noteId: note.id,
@@ -446,7 +576,8 @@ function scheduleAggregatedPlayback(
             presetKey: part.soundPresetKey,
             durationMs: Math.max(120, note.durationMs),
             velocity,
-            playAtServerMs: startAtServerMs + note.timestampMs + OUTPUT_DELAY_MS
+            playAtServerMs: startAtServerMs + note.timestampMs + OUTPUT_DELAY_MS,
+            source: "scheduled"
           });
         }, delay)
       );
@@ -460,12 +591,47 @@ function handleInputDown(
   message: Extract<ClientMessage, { type: "input_down" }>
 ): void {
   const room = getPartForStudent(state, student);
-  const scoreId = state.currentScoreId;
-  if (!room || !scoreId || !state.startAtServerMs) {
+  if (!room) {
     return;
   }
 
-  const part = state.scores[scoreId].parts.find((candidate) => candidate.id === room.partId);
+  if (isPracticePhase(state.phase)) {
+    let pressed = state.activeKeysByStudent.get(student.studentId);
+    if (!pressed) {
+      pressed = new Set();
+      state.activeKeysByStudent.set(student.studentId, pressed);
+    }
+    pressed.add(message.midi);
+
+    const score = state.scores[room.scoreId];
+    const part = score?.parts.find((candidate) => candidate.id === room.partId);
+    if (part && !state.mutedGroups.has(part.id)) {
+      broadcastToAdmins(state, {
+        type: "group_play_note",
+        partId: part.id,
+        noteId: `live:${message.eventId}`,
+        midi: message.midi,
+        presetKey: part.soundPresetKey,
+        durationMs: LIVE_PLAY_DURATION_MS,
+        velocity: LIVE_PLAY_VELOCITY,
+        playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+        source: "live"
+      });
+    }
+    broadcastStateSoon(state);
+    return;
+  }
+
+  if (
+    !isPerformancePhase(state.phase) ||
+    !state.performanceStartAtServerMs ||
+    !state.currentScoreId
+  ) {
+    return;
+  }
+
+  const score = state.scores[state.currentScoreId];
+  const part = score.parts.find((candidate) => candidate.id === room.partId);
   if (!part) {
     return;
   }
@@ -487,7 +653,7 @@ function handleInputDown(
     part.notes,
     message.midi,
     message.estimatedServerEventAtMs,
-    state.startAtServerMs
+    state.performanceStartAtServerMs
   );
   if (!expected) {
     return;
@@ -499,7 +665,7 @@ function handleInputDown(
     studentName: student.name,
     partId: part.id,
     expected,
-    expectedAtServerMs: state.startAtServerMs + expected.timestampMs,
+    expectedAtServerMs: state.performanceStartAtServerMs + expected.timestampMs,
     actualMidi: message.midi,
     downAtServerMs: message.estimatedServerEventAtMs,
     judgedAtMs: Date.now()
@@ -512,8 +678,23 @@ function handleInputUp(
   student: StudentSession,
   message: Extract<ClientMessage, { type: "input_up" }>
 ): void {
-  const scoreId = state.currentScoreId;
-  if (!scoreId || !state.startAtServerMs) {
+  if (isPracticePhase(state.phase)) {
+    const pressed = state.activeKeysByStudent.get(student.studentId);
+    if (pressed) {
+      pressed.delete(message.midi);
+      if (pressed.size === 0) {
+        state.activeKeysByStudent.delete(student.studentId);
+      }
+    }
+    broadcastStateSoon(state);
+    return;
+  }
+
+  if (
+    !isPerformancePhase(state.phase) ||
+    !state.performanceStartAtServerMs ||
+    !state.currentScoreId
+  ) {
     return;
   }
 
@@ -523,9 +704,8 @@ function handleInputUp(
   }
 
   event.serverUpAtMs = message.estimatedServerEventAtMs;
-  const part = state.scores[scoreId].parts.find(
-    (candidate) => candidate.id === event.partId
-  );
+  const score = state.scores[state.currentScoreId];
+  const part = score.parts.find((candidate) => candidate.id === event.partId);
   const expected = part?.notes.find((note) => note.id === event.matchedNoteId);
   if (!part || !expected) {
     return;
@@ -536,7 +716,7 @@ function handleInputUp(
     studentName: student.name,
     partId: part.id,
     expected,
-    expectedAtServerMs: state.startAtServerMs + expected.timestampMs,
+    expectedAtServerMs: state.performanceStartAtServerMs + expected.timestampMs,
     actualMidi: event.midi,
     downAtServerMs: event.serverDownAtMs,
     upAtServerMs: message.estimatedServerEventAtMs,
@@ -627,7 +807,7 @@ function withStudent(
   if (!student) {
     sendToConnection(state, connectionId, {
       type: "error",
-      message: "Session eleve introuvable."
+      message: "Session élève introuvable."
     });
     return;
   }
@@ -645,7 +825,7 @@ function withAdmin(
   if (connection?.role !== "admin") {
     sendToConnection(state, connectionId, {
       type: "error",
-      message: "Acces admin requis."
+      message: "Accès admin requis."
     });
     return;
   }
@@ -654,6 +834,10 @@ function withAdmin(
 }
 
 function broadcastState(state: RuntimeState): void {
+  if (stateBroadcastTimer !== undefined) {
+    clearTimeout(stateBroadcastTimer);
+    stateBroadcastTimer = undefined;
+  }
   broadcastToAll(state, {
     type: "state",
     state: publicState(state),
@@ -661,17 +845,18 @@ function broadcastState(state: RuntimeState): void {
   });
 }
 
-function broadcastToPart(
-  state: RuntimeState,
-  partId: string,
-  message: ServerMessage
-): void {
-  const students = activeStudentsForPart(state, partId);
-  for (const student of students) {
-    if (student.connectionId) {
-      sendToConnection(state, student.connectionId, message);
-    }
+function broadcastStateSoon(state: RuntimeState): void {
+  if (stateBroadcastTimer !== undefined) {
+    return;
   }
+  stateBroadcastTimer = setTimeout(() => {
+    stateBroadcastTimer = undefined;
+    broadcastToAll(state, {
+      type: "state",
+      state: publicState(state),
+      serverNowMs: Date.now()
+    });
+  }, STATE_COALESCE_MS);
 }
 
 function broadcastToAdmins(state: RuntimeState, message: ServerMessage): void {
@@ -710,3 +895,5 @@ function sendRaw(ws: { send(data: string): void }, message: ServerMessage): void
     // The close handler will clean up dead connections.
   }
 }
+
+void activeStudentsForPart;

@@ -19,6 +19,8 @@ type ClockSample = {
   offset: number;
 };
 
+const RESET_SENTINEL = "__RESET__";
+
 export function useRealtime() {
   const [status, setStatus] = useState<Status>("idle");
   const [role, setRole] = useState<Role | undefined>();
@@ -59,6 +61,103 @@ export function useRealtime() {
       });
     }, 2000);
   }, [send, stopClock]);
+
+  const handleServerMessage = useCallback((message: ServerMessage) => {
+    switch (message.type) {
+      case "welcome":
+        setRole(message.role);
+        setState(message.state);
+        setConnectionId(message.connectionId);
+        setServerTimeOffsetMs(message.serverNowMs - Date.now());
+        if (message.role === "student" && message.sessionToken) {
+          window.localStorage.setItem("sessionToken", message.sessionToken);
+          if (lastEntryRef.current) {
+            window.localStorage.setItem("studentName", lastEntryRef.current);
+          }
+        }
+        if (message.role === "admin") {
+          window.localStorage.removeItem("studentName");
+          window.localStorage.removeItem("sessionToken");
+        }
+        break;
+      case "state":
+        setState(message.state);
+        setServerTimeOffsetMs((previous) => {
+          const instantOffset = message.serverNowMs - Date.now();
+          return previous * 0.8 + instantOffset * 0.2;
+        });
+        break;
+      case "clock_pong": {
+        const clientReceivedAtMs = Date.now();
+        const roundTripMs = clientReceivedAtMs - message.clientSentAtMs;
+        const estimatedServerAtClientReceive =
+          message.serverSentAtMs + roundTripMs / 2;
+        const offset = estimatedServerAtClientReceive - clientReceivedAtMs;
+        const samples = [...clockSamplesRef.current, { rtt: roundTripMs, offset }]
+          .sort((a, b) => a.rtt - b.rtt)
+          .slice(0, 5);
+        clockSamplesRef.current = samples;
+        setServerTimeOffsetMs(samples[0]?.offset ?? offset);
+        break;
+      }
+      case "performance_start":
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                performanceStartAtServerMs: message.startAtServerMs,
+                currentScoreId: message.scoreId,
+                performanceStatus: "countdown"
+              }
+            : current
+        );
+        setLatestJudgement(undefined);
+        setGroupNotes([]);
+        break;
+      case "group_play_note":
+        setGroupNotes((current) =>
+          [
+            ...current,
+            {
+              ...message,
+              receivedAt: Date.now(),
+              key: `${message.partId}:${message.noteId}:${message.playAtServerMs}`
+            }
+          ].slice(-80)
+        );
+        break;
+      case "note_judgement":
+        setLatestJudgement(message.judgement);
+        break;
+      case "score_update":
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                groupScores: message.groupScores,
+                globalScore: message.globalScore
+              }
+            : current
+        );
+        break;
+      case "error":
+        if (message.message === RESET_SENTINEL) {
+          window.localStorage.removeItem("studentName");
+          window.localStorage.removeItem("sessionToken");
+          manualCloseRef.current = true;
+          lastEntryRef.current = undefined;
+          wsRef.current?.close();
+          setRole(undefined);
+          setState(undefined);
+          setError(undefined);
+          setConnectionId(undefined);
+          setStatus("idle");
+        } else {
+          setError(message.message);
+        }
+        break;
+    }
+  }, []);
 
   const connect = useCallback(
     (entry: string) => {
@@ -108,96 +207,11 @@ export function useRealtime() {
       });
 
       socket.addEventListener("error", () => {
-        setError("Connexion temps reel interrompue.");
+        setError("Connexion temps réel interrompue.");
       });
     },
-    [startClock, stopClock]
+    [handleServerMessage, startClock, stopClock]
   );
-
-  const handleServerMessage = useCallback((message: ServerMessage) => {
-    switch (message.type) {
-      case "welcome":
-        setRole(message.role);
-        setState(message.state);
-        setConnectionId(message.connectionId);
-        setServerTimeOffsetMs(message.serverNowMs - Date.now());
-        if (message.role === "student" && message.sessionToken) {
-          window.localStorage.setItem("sessionToken", message.sessionToken);
-          if (lastEntryRef.current) {
-            window.localStorage.setItem("studentName", lastEntryRef.current);
-          }
-        }
-        if (message.role === "admin") {
-          window.localStorage.removeItem("studentName");
-          window.localStorage.removeItem("sessionToken");
-        }
-        break;
-      case "state":
-        setState(message.state);
-        setServerTimeOffsetMs((previous) => {
-          const instantOffset = message.serverNowMs - Date.now();
-          return previous * 0.8 + instantOffset * 0.2;
-        });
-        break;
-      case "clock_pong": {
-        const clientReceivedAtMs = Date.now();
-        const roundTripMs = clientReceivedAtMs - message.clientSentAtMs;
-        const estimatedServerAtClientReceive =
-          message.serverSentAtMs + roundTripMs / 2;
-        const offset = estimatedServerAtClientReceive - clientReceivedAtMs;
-        const samples = [...clockSamplesRef.current, { rtt: roundTripMs, offset }]
-          .sort((a, b) => a.rtt - b.rtt)
-          .slice(0, 5);
-        clockSamplesRef.current = samples;
-        setServerTimeOffsetMs(samples[0]?.offset ?? offset);
-        break;
-      }
-      case "performance_start":
-        setState((current) =>
-          current
-            ? {
-                ...current,
-                currentScoreId: message.scoreId,
-                startAtServerMs: message.startAtServerMs,
-                audioMode: message.audioMode,
-                performanceStatus: "countdown"
-              }
-            : current
-        );
-        setLatestJudgement(undefined);
-        setGroupNotes([]);
-        break;
-      case "group_play_note":
-        setGroupNotes((current) =>
-          [
-            ...current,
-            {
-              ...message,
-              receivedAt: Date.now(),
-              key: `${message.partId}:${message.noteId}:${message.playAtServerMs}`
-            }
-          ].slice(-80)
-        );
-        break;
-      case "note_judgement":
-        setLatestJudgement(message.judgement);
-        break;
-      case "score_update":
-        setState((current) =>
-          current
-            ? {
-                ...current,
-                groupScores: message.groupScores,
-                globalScore: message.globalScore
-              }
-            : current
-        );
-        break;
-      case "error":
-        setError(message.message);
-        break;
-    }
-  }, []);
 
   useEffect(() => {
     return () => {

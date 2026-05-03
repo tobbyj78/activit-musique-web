@@ -9,32 +9,46 @@ import {
   type ScorePart
 } from "@classe-orchestre/shared";
 
-const USE_ONLY_NOTES_PRESENT_IN_PART = true;
-
 export const SOURCE_NAME_TO_PRESET_KEY: Record<string, string> = {
-  Piano: "piano",
-  "Acoustic Grand Piano": "piano",
   Flute: "flute",
-  Violin: "violin",
-  Violin_I: "violin",
-  Violin_II: "violin",
-  Violins_I: "violin",
-  Violins_II: "violin",
+  Oboe: "oboe",
+  Clarinet: "clarinet",
+  Bassoon: "bassoon",
+  Horn: "horn",
+  "French Horn": "horn",
+  Trumpet: "trumpet",
+  Trombone: "trombone",
+  Timpani: "timpani",
+  Violin: "violinI",
+  Violin_I: "violinI",
+  Violins_I: "violinI",
+  "Violin I": "violinI",
+  Violin_II: "violinII",
+  Violins_II: "violinII",
+  "Violin II": "violinII",
   Viola: "viola",
   Violas: "viola",
   Cello: "cello",
   Violoncello: "cello",
   Violoncellos: "cello",
   Contrabass: "contrabass",
-  Contrabasses: "contrabass",
-  Trumpet: "trumpet",
-  Trombone: "trombone",
-  Horn: "frenchHorn",
-  "French Horn": "frenchHorn",
-  Oboe: "oboe",
-  Clarinet: "clarinet",
-  Bassoon: "bassoon",
-  Timpani: "timpani"
+  Contrabasses: "contrabass"
+};
+
+const SOURCE_NAME_TO_DISPLAY: Record<string, string> = {
+  Flute: "Flûte",
+  Oboe: "Hautbois",
+  Clarinet: "Clarinette",
+  Bassoon: "Basson",
+  Horn: "Cor",
+  Trumpet: "Trompette",
+  Trombone: "Trombone",
+  Timpani: "Timbales",
+  Violins_I: "Violons I",
+  Violins_II: "Violons II",
+  Violas: "Altos",
+  Violoncellos: "Violoncelles",
+  Contrabasses: "Contrebasses"
 };
 
 type RawNote = {
@@ -56,10 +70,10 @@ type RawScore = {
     duration_ms?: number;
   };
   instruments?: Record<string, RawPart>;
-} & Record<string, unknown>;
+};
 
 export function normalizeScore(id: ScoreId, raw: RawScore): NormalizedScore {
-  const sourceParts = getSourceParts(id, raw);
+  const sourceParts = raw.instruments ?? {};
   const parts = Object.entries(sourceParts).map(([sourceName, rawPart]) =>
     normalizePart(id, sourceName, rawPart)
   );
@@ -79,34 +93,20 @@ export function normalizeScore(id: ScoreId, raw: RawScore): NormalizedScore {
   };
 }
 
-function getSourceParts(id: ScoreId, raw: RawScore): Record<string, RawPart> {
-  if (raw.instruments && typeof raw.instruments === "object") {
-    return raw.instruments;
-  }
-
-  if (id === "orchestre") {
-    return Object.fromEntries(
-      Object.entries(raw).filter(
-        ([key, value]) => key !== "meta" && isRawPart(value)
-      )
-    ) as Record<string, RawPart>;
-  }
-
-  return {};
-}
-
 function normalizePart(
   scoreId: ScoreId,
   sourceName: string,
   rawPart: RawPart
 ): ScorePart {
   const rawNotes = rawPart.notes ?? [];
-  const midiValues = rawNotes.map((note) => noteNameToMidi(note.note));
+  const midiValues = rawNotes
+    .map((note) => noteNameToMidi(note.note))
+    .filter((value): value is number => Number.isFinite(value));
   const uniqueMidis = Array.from(new Set(midiValues)).sort((a, b) => a - b);
-  const lanes = buildLanes(uniqueMidis);
+  const lanes = buildChromaticLanes(uniqueMidis);
   const laneByMidi = new Map(lanes.map((lane, index) => [lane.midi, index]));
 
-  const partId = sourceName;
+  const partId = `${scoreId}:${sourceName}`;
   const notes: ScheduledNote[] = rawNotes.map((rawNote, index) => {
     const midi = noteNameToMidi(rawNote.note);
 
@@ -124,7 +124,7 @@ function normalizePart(
 
   return {
     id: partId,
-    displayName: displayNameFor(sourceName),
+    displayName: displayNameFor(scoreId, sourceName),
     sourceName,
     soundPresetKey:
       scoreId === "piano_only"
@@ -142,9 +142,13 @@ function normalizePart(
   };
 }
 
-function buildLanes(uniqueMidis: number[]): PianoLane[] {
-  const midis = USE_ONLY_NOTES_PRESENT_IN_PART ? uniqueMidis : chromaticRange(uniqueMidis);
-
+function buildChromaticLanes(uniqueMidis: number[]): PianoLane[] {
+  if (uniqueMidis.length === 0) {
+    return [];
+  }
+  const min = uniqueMidis[0];
+  const max = uniqueMidis.at(-1)!;
+  const midis = Array.from({ length: max - min + 1 }, (_, index) => min + index);
   return midis.map((midi) => ({
     midi,
     label: midiToNoteName(midi),
@@ -152,33 +156,16 @@ function buildLanes(uniqueMidis: number[]): PianoLane[] {
   }));
 }
 
-function chromaticRange(uniqueMidis: number[]): number[] {
-  const min = uniqueMidis[0] ?? 60;
-  const max = uniqueMidis.at(-1) ?? 72;
-  return Array.from({ length: max - min + 1 }, (_, index) => min + index);
-}
-
-function displayNameFor(sourceName: string): string {
-  const groupMatch = sourceName.match(/^groupe_(\d+)$/i);
-  if (groupMatch) {
-    return `Groupe ${groupMatch[1]}`;
+function displayNameFor(scoreId: ScoreId, sourceName: string): string {
+  if (scoreId === "piano_only") {
+    const groupMatch = sourceName.match(/^groupe_(\d+)$/i);
+    if (groupMatch) {
+      return `Groupe ${groupMatch[1]}`;
+    }
   }
-
-  return sourceName
-    .replaceAll("_", " ")
-    .replace(/\bI\b/g, "I")
-    .replace(/\bIi\b/g, "II");
+  return SOURCE_NAME_TO_DISPLAY[sourceName] ?? sourceName.replaceAll("_", " ");
 }
 
 function clampVelocity(value: number): number {
   return Math.min(1, Math.max(0, Number(value) || 0));
-}
-
-function isRawPart(value: unknown): value is RawPart {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "notes" in value &&
-      Array.isArray((value as RawPart).notes)
-  );
 }

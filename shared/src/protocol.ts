@@ -1,14 +1,17 @@
 import { z } from "zod";
 import type { NormalizedScore, ScoreId } from "./score";
+import type { SurveyResults } from "./survey";
 
-export const appStageSchema = z.enum([
-  "lobby",
-  "piano_practice",
-  "piano_performance",
-  "piano_qa",
-  "orchestra_practice",
-  "orchestra_performance",
-  "orchestra_qa"
+export const appPhaseSchema = z.enum([
+  "phase1_lobby",
+  "phase2_groups",
+  "phase3_practice",
+  "phase4_performance",
+  "phase5_survey",
+  "phase6_orchestra_groups",
+  "phase7_orchestra_practice",
+  "phase8_orchestra_performance",
+  "phase9_orchestra_survey"
 ]);
 
 export const performanceStatusSchema = z.enum([
@@ -20,11 +23,9 @@ export const performanceStatusSchema = z.enum([
 ]);
 
 export const scoreIdSchema = z.enum(["piano_only", "orchestre"]);
-export const audioModeSchema = z.enum(["local_immediate", "server_aggregated"]);
 
-export type AppStage = z.infer<typeof appStageSchema>;
+export type AppPhase = z.infer<typeof appPhaseSchema>;
 export type PerformanceStatus = z.infer<typeof performanceStatusSchema>;
-export type AudioMode = z.infer<typeof audioModeSchema>;
 
 export type BaseMessage = {
   type: string;
@@ -38,8 +39,6 @@ export type StudentPublicSession = {
   partId?: string;
   joinedAt: number;
   lastSeenAt: number;
-  ready: boolean;
-  isSpeaker: boolean;
   online: boolean;
 };
 
@@ -50,14 +49,6 @@ export type PartPublicRoom = {
   soundPresetKey: string;
   students: string[];
   maxSize: number;
-};
-
-export type QAQuestion = {
-  id: string;
-  studentName: string;
-  text: string;
-  createdAt: number;
-  answered: boolean;
 };
 
 export type IndividualNoteScore = {
@@ -93,22 +84,20 @@ export type GroupScore = {
   judgedNotes: number;
   expectedNotes: number;
   activeStudents: number;
-  incomplete: boolean;
   studentScores: StudentScore[];
 };
 
 export type PublicState = {
-  stage: AppStage;
+  phase: AppPhase;
   performanceStatus: PerformanceStatus;
+  performanceStartAtServerMs?: number;
   currentScoreId?: ScoreId;
-  startAtServerMs?: number;
-  audioMode: AudioMode;
-  groupSize: number;
-  allowOverflow: boolean;
   scores: Record<ScoreId, NormalizedScore>;
   parts: PartPublicRoom[];
   students: StudentPublicSession[];
-  questions: QAQuestion[];
+  mutedGroups: string[];
+  activeKeysByStudent: Record<string, number[]>;
+  surveyResults: SurveyResults;
   groupScores: GroupScore[];
   globalScore: number;
 };
@@ -142,11 +131,6 @@ export const clientMessageSchema = z.union([
   }),
   z.object({
     ...baseFields,
-    type: z.literal("ready"),
-    ready: z.boolean()
-  }),
-  z.object({
-    ...baseFields,
     type: z.literal("clock_ping"),
     clientSentAtMs: z.number()
   }),
@@ -170,48 +154,28 @@ export const clientMessageSchema = z.union([
   }),
   z.object({
     ...baseFields,
-    type: z.literal("admin_set_stage"),
-    stage: appStageSchema
+    type: z.literal("admin_advance_phase")
   }),
   z.object({
     ...baseFields,
-    type: z.literal("admin_start_performance"),
-    scoreId: scoreIdSchema,
-    startDelayMs: z.number().int().min(0).max(10000),
-    audioMode: audioModeSchema
+    type: z.literal("admin_reset")
   }),
   z.object({
     ...baseFields,
-    type: z.literal("admin_stop")
-  }),
-  z.object({
-    ...baseFields,
-    type: z.literal("admin_set_overflow"),
-    allowOverflow: z.boolean()
-  }),
-  z.object({
-    ...baseFields,
-    type: z.literal("admin_assign_student"),
-    studentId: z.string().min(1),
+    type: z.literal("admin_toggle_group_mute"),
     partId: z.string().min(1)
   }),
   z.object({
     ...baseFields,
-    type: z.literal("qa_submit_question"),
-    text: z.string().trim().min(1).max(500)
-  }),
-  z.object({
-    ...baseFields,
-    type: z.literal("admin_mark_question_answered"),
-    questionId: z.string().min(1)
-  }),
-  z.object({
-    ...baseFields,
-    type: z.literal("admin_clear_questions")
+    type: z.literal("student_submit_answer"),
+    questionId: z.string().min(1),
+    answerId: z.string().min(1)
   })
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
+
+export type GroupPlayNoteSource = "live" | "scheduled";
 
 export type ServerMessage =
   | {
@@ -237,7 +201,6 @@ export type ServerMessage =
       type: "performance_start";
       scoreId: ScoreId;
       startAtServerMs: number;
-      audioMode: AudioMode;
     }
   | {
       type: "group_play_note";
@@ -248,6 +211,7 @@ export type ServerMessage =
       durationMs: number;
       velocity: number;
       playAtServerMs: number;
+      source: GroupPlayNoteSource;
     }
   | {
       type: "note_judgement";

@@ -181,7 +181,7 @@ export class AudioEngine {
     velocity: number
   ): void {
     const audioContext = this.ensureAudioContext();
-    const safeVelocity = Math.min(0.8, Math.max(0, velocity));
+    const safeVelocity = Math.min(0.95, Math.max(0, velocity));
     const durationSeconds = Math.max(0.08, durationMs / 1000);
 
     if (this.player?.queueWaveTable) {
@@ -261,8 +261,19 @@ export class AudioEngine {
     const promise = (async () => {
       const player = await this.ensurePlayer();
       await this.loadScript(preset.file);
-      const value = window[preset.variableName] as WebAudioFontPreset | undefined;
-      const loadedPreset = value ?? { waveType: "sine", gain: 0.3 };
+      const sourceValue = window[preset.variableName] as
+        | (WebAudioFontPreset & { zones?: unknown[] })
+        | undefined;
+      let loadedPreset: WebAudioFontPreset = sourceValue ?? {
+        waveType: "sine",
+        gain: 0.3
+      };
+      if (preset.copyKey && sourceValue && Array.isArray(sourceValue.zones)) {
+        loadedPreset = {
+          ...sourceValue,
+          zones: sourceValue.zones.map((zone) => ({ ...(zone as object) }))
+        } as WebAudioFontPreset;
+      }
       player.loader?.decodeAfterLoading?.(
         this.ensureAudioContext(),
         preset.variableName
@@ -429,26 +440,6 @@ function writeAscii(view: DataView, offset: number, text: string): void {
   }
 }
 
-function synthPresetFor(presetKey: string): WebAudioFontPreset {
-  switch (presetKey) {
-    case "trumpet":
-    case "frenchHorn":
-      return { waveType: "square", gain: 0.24 };
-    case "violin":
-    case "viola":
-    case "oboe":
-      return { waveType: "sawtooth", gain: 0.2 };
-    case "cello":
-    case "contrabass":
-    case "bassoon":
-      return { waveType: "square", gain: 0.17 };
-    case "flute":
-    case "clarinet":
-      return { waveType: "sine", gain: 0.3 };
-    case "timpani":
-      return { waveType: "sine", gain: 0.5 };
-    case "piano":
-    default:
-      return { waveType: "triangle", gain: 0.34 };
-  }
+function synthPresetFor(_presetKey: string): WebAudioFontPreset {
+  return { waveType: "triangle", gain: 0.34 };
 }
