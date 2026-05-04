@@ -548,25 +548,7 @@ function scheduleAggregatedPlayback(
             if (note.autoPlay) {
               velocity = Math.min(0.95, note.velocity);
             } else {
-              const expectedAtServerMs = startAtServerMs + note.timestampMs;
-              const pressers = countCorrectPressers(
-                state,
-                part.id,
-                note,
-                expectedAtServerMs
-              );
-              if (pressers === 0) {
-                return;
-              }
-              const factor =
-                pressers === 1
-                  ? 0.3
-                  : pressers === 2
-                    ? 0.7
-                    : pressers === 3
-                      ? 0.9
-                      : 1;
-              velocity = Math.min(0.95, note.velocity * factor);
+              return;
             }
           } else {
             velocity = Math.min(0.95, note.velocity);
@@ -641,6 +623,21 @@ function handleInputDown(
     return;
   }
 
+  if (!state.mutedGroups.has(part.id)) {
+    broadcastToAdmins(state, {
+      type: "group_play_note",
+      partId: part.id,
+      noteId: `live:${message.eventId}`,
+      eventId: message.eventId,
+      midi: message.midi,
+      presetKey: part.soundPresetKey,
+      durationMs: LIVE_PLAY_DURATION_MS,
+      velocity: 0.35,
+      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+      source: "live"
+    });
+  }
+
   const event: InputEventRecord = {
     eventId: message.eventId,
     studentId: student.studentId,
@@ -708,6 +705,8 @@ function handleInputUp(
   if (!event || event.studentId !== student.studentId) {
     return;
   }
+
+  broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
 
   event.serverUpAtMs = message.estimatedServerEventAtMs;
   const score = state.scores[state.currentScoreId];
