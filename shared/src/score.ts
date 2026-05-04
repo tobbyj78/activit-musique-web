@@ -32,6 +32,7 @@ export type ScheduledNote = {
   durationMs: number;
   velocity: number;
   laneIndex: number;
+  autoPlay?: boolean;
 };
 
 export type PianoLane = {

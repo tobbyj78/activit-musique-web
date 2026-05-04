@@ -87,8 +87,10 @@ function expectedNotesForState(
   notes: ScheduledNote[],
   nowMs: number
 ): ScheduledNote[] {
+  const playableNotes = notes.filter((note) => !note.autoPlay);
+
   if (!state.performanceStartAtServerMs) {
-    return notes.filter((note) =>
+    return playableNotes.filter((note) =>
       Array.from(state.judgements.values()).some((judgement) => judgement.noteId === note.id)
     );
   }
@@ -99,7 +101,7 @@ function expectedNotesForState(
       ? elapsedMs
       : Math.max(0, elapsedMs - MISS_WINDOW_MS);
 
-  return notes.filter((note) => note.timestampMs <= cutoffMs);
+  return playableNotes.filter((note) => note.timestampMs <= cutoffMs);
 }
 
 function scoreForStudent(

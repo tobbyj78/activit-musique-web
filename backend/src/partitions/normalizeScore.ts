@@ -9,6 +9,25 @@ import {
   type ScorePart
 } from "@classe-orchestre/shared";
 
+const OPTIMAL_RANGES: Record<string, { minMidi: number; maxMidi: number }> = {
+  "piano_only:groupe_1": { minMidi: 64, maxMidi: 75 },
+  "piano_only:groupe_2": { minMidi: 63, maxMidi: 74 },
+  "piano_only:groupe_3": { minMidi: 63, maxMidi: 74 },
+  "piano_only:groupe_4": { minMidi: 50, maxMidi: 61 },
+  "orchestre:Flute":       { minMidi: 83, maxMidi: 94 },
+  "orchestre:Oboe":        { minMidi: 71, maxMidi: 82 },
+  "orchestre:Clarinet":    { minMidi: 59, maxMidi: 70 },
+  "orchestre:Bassoon":     { minMidi: 48, maxMidi: 59 },
+  "orchestre:Horn":        { minMidi: 57, maxMidi: 68 },
+  "orchestre:Trumpet":     { minMidi: 55, maxMidi: 66 },
+  "orchestre:Timpani":     { minMidi: 43, maxMidi: 54 },
+  "orchestre:Violins_I":   { minMidi: 68, maxMidi: 79 },
+  "orchestre:Violins_II":  { minMidi: 61, maxMidi: 72 },
+  "orchestre:Violas":      { minMidi: 48, maxMidi: 59 },
+  "orchestre:Violoncellos": { minMidi: 38, maxMidi: 49 },
+  "orchestre:Contrabasses": { minMidi: 30, maxMidi: 41 }
+};
+
 export const SOURCE_NAME_TO_PRESET_KEY: Record<string, string> = {
   Flute: "flute",
   Oboe: "oboe",
@@ -103,12 +122,17 @@ function normalizePart(
     .map((note) => noteNameToMidi(note.note))
     .filter((value): value is number => Number.isFinite(value));
   const uniqueMidis = Array.from(new Set(midiValues)).sort((a, b) => a - b);
-  const lanes = buildChromaticLanes(uniqueMidis);
-  const laneByMidi = new Map(lanes.map((lane, index) => [lane.midi, index]));
 
   const partId = `${scoreId}:${sourceName}`;
+  const optRange = OPTIMAL_RANGES[partId];
+  const lanes = optRange
+    ? buildChromaticLanes(optRange.minMidi, optRange.maxMidi)
+    : buildChromaticLanes(uniqueMidis[0] ?? 60, uniqueMidis.at(-1) ?? 60);
+  const laneByMidi = new Map(lanes.map((lane, index) => [lane.midi, index]));
+
   const notes: ScheduledNote[] = rawNotes.map((rawNote, index) => {
     const midi = noteNameToMidi(rawNote.note);
+    const outOfRange = optRange !== undefined && (midi < optRange.minMidi || midi > optRange.maxMidi);
 
     return {
       id: `${scoreId}:${sourceName}:${index}`,
@@ -118,7 +142,8 @@ function normalizePart(
       timestampMs: Math.max(0, Number(rawNote.timestamp_ms) || 0),
       durationMs: Math.max(0, Number(rawNote.duration_ms) || 0),
       velocity: clampVelocity(rawNote.velocity ?? 0.6),
-      laneIndex: laneByMidi.get(midi) ?? 0
+      laneIndex: outOfRange ? 0 : (laneByMidi.get(midi) ?? 0),
+      ...(outOfRange ? { autoPlay: true } : {})
     };
   });
 
@@ -142,14 +167,9 @@ function normalizePart(
   };
 }
 
-function buildChromaticLanes(uniqueMidis: number[]): PianoLane[] {
-  if (uniqueMidis.length === 0) {
-    return [];
-  }
-  const min = uniqueMidis[0];
-  const max = uniqueMidis.at(-1)!;
-  const midis = Array.from({ length: max - min + 1 }, (_, index) => min + index);
-  return midis.map((midi) => ({
+function buildChromaticLanes(minMidi: number, maxMidi: number): PianoLane[] {
+  if (maxMidi < minMidi) return [];
+  return Array.from({ length: maxMidi - minMidi + 1 }, (_, i) => minMidi + i).map((midi) => ({
     midi,
     label: midiToNoteName(midi),
     isBlackKey: isBlackMidi(midi)

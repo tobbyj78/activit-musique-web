@@ -545,25 +545,29 @@ function scheduleAggregatedPlayback(
 
           let velocity = note.velocity;
           if (mode === "voted") {
-            const expectedAtServerMs = startAtServerMs + note.timestampMs;
-            const pressers = countCorrectPressers(
-              state,
-              part.id,
-              note,
-              expectedAtServerMs
-            );
-            if (pressers === 0) {
-              return;
+            if (note.autoPlay) {
+              velocity = Math.min(0.95, note.velocity);
+            } else {
+              const expectedAtServerMs = startAtServerMs + note.timestampMs;
+              const pressers = countCorrectPressers(
+                state,
+                part.id,
+                note,
+                expectedAtServerMs
+              );
+              if (pressers === 0) {
+                return;
+              }
+              const factor =
+                pressers === 1
+                  ? 0.3
+                  : pressers === 2
+                    ? 0.7
+                    : pressers === 3
+                      ? 0.9
+                      : 1;
+              velocity = Math.min(0.95, note.velocity * factor);
             }
-            const factor =
-              pressers === 1
-                ? 0.3
-                : pressers === 2
-                  ? 0.7
-                  : pressers === 3
-                    ? 0.9
-                    : 1;
-            velocity = Math.min(0.95, note.velocity * factor);
           } else {
             velocity = Math.min(0.95, note.velocity);
           }

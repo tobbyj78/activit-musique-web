@@ -35,6 +35,7 @@ export function NoteHighway({
     const elapsedMs = serverNow - startAtServerMs;
 
     return part.notes
+      .filter((note) => !note.autoPlay)
       .map((note) => ({
         note,
         timeUntilHit: note.timestampMs - elapsedMs

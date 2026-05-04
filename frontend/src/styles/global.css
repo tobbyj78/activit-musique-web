@@ -321,15 +321,13 @@ ul {
 .keyboard {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(46px, 1fr);
-  gap: 6px;
-  overflow-x: auto;
-  padding: 8px 4px 6px;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 8px 0 6px;
   touch-action: none;
 }
 
 .key {
-  min-width: 46px;
   height: clamp(80px, 22vh, 180px);
   border: 1px solid rgba(247, 241, 223, 0.22);
   border-radius: 8px;
