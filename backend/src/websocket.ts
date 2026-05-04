@@ -623,7 +623,7 @@ function handleInputDown(
     return;
   }
 
-  if (!state.mutedGroups.has(part.id)) {
+  if (!state.mutedGroups.has(part.id) && state.phase !== "phase8_orchestra_performance") {
     broadcastToAdmins(state, {
       type: "group_play_note",
       partId: part.id,
@@ -706,7 +706,9 @@ function handleInputUp(
     return;
   }
 
-  broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
+  if (state.phase !== "phase8_orchestra_performance") {
+    broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
+  }
 
   event.serverUpAtMs = message.estimatedServerEventAtMs;
   const score = state.scores[state.currentScoreId];
