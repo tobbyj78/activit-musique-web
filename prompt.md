@@ -1,64 +1,64 @@
-le piano sur téléphone est mal implémenté.
-il va falloir faire des changements pour améliorer ça.
+Dans la pahse #3 et phase #4 : le son du piano doit faire un son de vrai piano, et non un son synthétique comme c'est le cas ici (peut être que utiliser la bibliothèque webaudiofont marcherais ?).
 
-part du principe que les élèves seront sur leur téléphone en mode paysage, donc width entre 700px et 900px.
-Je veux que sur l'écran des élèves il y ai 12 touches de piano. pas plus, en ce moment c'est plus de 40 je crois bien (pour le groupe 1), donc on va devoir faire des changements.
-Important : les 12 touches doivent prendre tout l'écran, tu fais en % du width.
+Pour la phase #7 et phase #8 :
+le son du piano fait le son de l'intrument associé au groupe,  et non un son synthétique comme c'est le cas ici (peut être que utiliser la bibliothèque webaudiofont marcherais ?) regarde le fichier orchestre.html, c'est un site qui permet de récupérer le fichier orchestre.json et de le jouer avec de très bon sons.
+Je veux aussi que si un élève presse durablement la touche, le son reste sur la durée, jusqu'à ce que la touche est relachée.
 
-pour ça j'ai une idée, on leur met la plage de touche optimale, c'est à dire la plage des 12 touches les plus utilisés. et *pour chaque groupe : les notes qui ne tombent pas dans la plage associé au groupe, on les fait jouer par l'ordinateur* (respecte le timing et la durée).
-pense aussi que puisque tu supprime des touches et que tu changes la largeur des touches, il faut aussi modifier les "notes qui tombent" façon piano tiles 2.
-voici la plage des touches pour chaque groupe pour le morceau piano_only :
-Voici l'analyse pour chaque groupe afin de maximiser les notes conservées dans une fenêtre de 12 demi-tons consécutifs :
+---
 
-Groupe 1
-* Plage optimale conservée : E4 à D#5 
+## État d'implémentation (session 2026-05-04)
 
-Groupe 2
-* Plage optimale conservée : D#4 à D5
+**Tout ce qui suit a été implémenté et est fonctionnel.**
 
-Groupe 3
-* Plage optimale conservée : D#4 à D5
+### Architecture actuelle : 9 phases
 
-Groupe 4
-* Plage optimale conservée : D3 à C#4
+L'app tourne en 9 phases linéaires (`shared/src/protocol.ts:appPhaseSchema`). La machine est :
+`phase1_lobby → phase2_groups → phase3_practice → phase4_performance → phase5_survey → phase6_orchestra_groups → phase7_orchestra_practice → phase8_orchestra_performance → phase9_orchestra_survey → phase1_lobby (reset)`
 
-Voici la plage des touches pour chaque instruments pour le morceau orchestre :
-Important : ici pas besoin de jouer le sons automatiquement sur les notes qui ne sont pas dans la plage optimale, puisque pour l'orchestre on triche, on ne met pas le son des élèves mais direct le son de l'ordinateur.
+### Audio — ce qui est en place
 
+**Piano (phases 3 & 4)** : WebAudioFont `0000_FluidR3_GM_sf2_file.js` (~1.2MB, acoustic grand piano multi-échantillonné). Fichier dans `frontend/public/webaudiofont/instruments/`. Preset : `_tone_0000_FluidR3_GM_sf2_file`. Son dure tant que la touche est tenue (durée 700ms en live, durée réelle de la note en performance).
 
-Flûte
-Plage optimale : B5 à A#6
+**Orchestre (phases 7 & 8)** : 12 instruments, chacun un fichier GeneralUserGS distinct dans `frontend/public/webaudiofont/instruments/`. Mapping dans `backend/src/partitions/normalizeScore.ts:SOURCE_NAME_TO_PRESET_KEY`. ViolonII est un deep-clone de ViolonI (même preset 0710) via `copyKey` pour éviter les conflits d'envelope.
 
-Hautbois (Oboe)
-Plage optimale : B4 à A#5
+**Audio admin uniquement** : `group_play_note` est broadcasté uniquement aux connexions admin (`broadcastToAdmins`). Les élèves ne produisent jamais de son. `AudioContext` n'est jamais créé côté élève.
 
-Clarinette
-Plage optimale : B3 à A#4
+**Phase 8 spécifique** : le son est joué *automatiquement par l'ordinateur* (`mode: "always"` dans `scheduleAggregatedPlayback`). Toutes les notes d'`orchestre.json` sont broadcastées à l'admin avec vélocité pleine. Les inputs élèves passent quand même par `judgeNote()` pour le scoring.
 
-Basson
-Plage optimale : C3 à B3
+**Phase 4** : son *agrégé/voté* — count d'élèves qui ont pressé le bon MIDI → formule 1=30%, 2=70%, 3=90%, 4+=100% de vélocité.
 
-Cor (Horn)
-Plage optimale : A3 à G#4
+### Architecture backend critique
 
-Trompette
-Plage optimale : G3 à F#4
+- `partId` format : `${scoreId}:${sourceName}` (ex: `piano_only:groupe_1`, `orchestre:Flute`) — essentiel pour éviter les collisions quand un élève a un partId piano et rejoint ensuite un groupe orchestre.
+- `scoreIdForPhase()` dans `websocket.ts` retourne `"piano_only"` pour phases 2-5, `"orchestre"` pour phases 6-9.
+- `join_part` valide que le `partId` correspond au scoreId attendu pour la phase courante.
+- `resetRuntimeState()` vide tout : students, parts, inputs, timers, surveyAnswers, mutedGroups, activeKeysByStudent.
+- Lock connexions : hors phase 1, refus des `hello` student sans sessionToken valide.
 
-Timbales (Timpani)
-Plage optimale : G2 à F#3
+### Patterns importants
 
-Violons I
-Plage optimale : G#4 à G5
+- **Reset sentinel** : le serveur envoie `{ type: "error", message: "__RESET__" }` aux élèves avant de fermer leur WS. `useRealtime.ts` intercepte ce sentinel → vide localStorage → désactive reconnexion auto → élève retombe sur LandingPage vierge.
+- **Coalescing broadcast** : `broadcastStateSoon()` dans `websocket.ts` utilise un flag microtask pour éviter de flooder en phase 3 (N élèves × inputs rapides).
+- **ViolonII deep-clone** : `AudioEngine.loadPreset()` vérifie `preset.copyKey` et copie profondément les zones pour éviter que ViolonI et ViolonII partagent les mêmes objets d'enveloppe.
 
-Violons II
-Plage optimale : C#4 à C5
+### Fichiers clés à connaître
 
-Altos (Violas)
-Plage optimale : C3 à B3
+| Fichier | Rôle |
+|---|---|
+| `shared/src/protocol.ts` | Toute la définition du protocole WS + types |
+| `shared/src/survey.ts` | 7 questions du sondage (utilisées en phases 5 & 9) |
+| `backend/src/state.ts` | RuntimeState + publicState() + resetRuntimeState() |
+| `backend/src/websocket.ts` | Machine de phases, handlers WS, scheduleAggregatedPlayback |
+| `backend/src/scoring/aggregate.ts` | countCorrectPressers() pour le mode voté |
+| `backend/src/partitions/normalizeScore.ts` | SOURCE_NAME_TO_PRESET_KEY, buildChromaticLanes, partId format |
+| `frontend/src/audio/instrumentPresets.ts` | 13 presets (piano + 12 orchestre), ORCHESTRA_PRESET_KEYS |
+| `frontend/src/audio/AudioEngine.ts` | loadPreset(), schedule(), unlock(), copyKey deep-clone |
+| `frontend/src/pages/AdminPage.tsx` | Vues généralisées : GroupsView/PracticeView/PerformanceView/SurveyView |
+| `frontend/src/styles/global.css` | Layout admin 1430×800, grilles phase6/7/8 (4×3), styles téléphone |
 
-Violoncelles
-Plage optimale : D2 à C#3
+### Ce qui n'a PAS changé
 
-Contrebasses
-Plage optimale : F#1 à F2
-
+- `NoteHighway.tsx` — inchangé (hit line 84%, leadTime 3000ms)
+- `scoring/judge.ts` — logique timing+hold inchangée
+- `clock_ping`/`clock_pong` — synchronisation temporelle inchangée
+- `GroupPicker.tsx` — filtré dynamiquement selon le scoreId de la phase courante

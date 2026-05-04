@@ -36,6 +36,7 @@
     gain.connect(destination);
     oscillator.start(when);
     oscillator.stop(when + Math.max(0.08, duration) + 0.05);
+    return { oscillator: oscillator, gain: gain };
   };
 
   global.WebAudioFontPlayer = WebAudioFontPlayer;

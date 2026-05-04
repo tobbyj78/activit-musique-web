@@ -53,6 +53,7 @@ export function App() {
         audioReady={audioReady}
         serverTimeOffsetMs={realtime.serverTimeOffsetMs}
         groupNotes={realtime.groupNotes}
+        groupStops={realtime.groupStops}
         onUnlockAudio={async () => {
           await audioEngine.unlock();
           setAudioReady(true);

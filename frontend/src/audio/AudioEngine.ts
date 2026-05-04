@@ -5,6 +5,11 @@ type WebAudioFontPreset = {
   gain?: number;
 };
 
+type PlayingNode = {
+  oscillator: { stop(when: number): void };
+  gain: { gain: AudioParam };
+};
+
 type WebAudioFontPlayerLike = {
   loader?: {
     decodeAfterLoading?: (
@@ -20,7 +25,7 @@ type WebAudioFontPlayerLike = {
     midi: number,
     duration: number,
     velocity: number
-  ) => void;
+  ) => PlayingNode | undefined;
 };
 
 export type AudioDebugState = {
@@ -46,6 +51,7 @@ export class AudioEngine {
   private loadedPresets = new Map<string, WebAudioFontPreset>();
   private noteUrls = new Map<string, string>();
   private beepUrl?: string;
+  private activeNodes = new Map<string, PlayingNode>();
 
   async unlock(): Promise<void> {
     const audioContext = this.ensureAudioContext();
@@ -159,6 +165,7 @@ export class AudioEngine {
     velocity: number;
     playAtServerMs: number;
     serverTimeOffsetMs: number;
+    sustainKey?: string;
   }): Promise<void> {
     const audioContext = this.ensureAudioContext();
     const preset = this.presetForPlayback(args.presetKey);
@@ -169,8 +176,27 @@ export class AudioEngine {
     );
     const when = audioContext.currentTime + delaySeconds;
 
-    this.queue(preset, when, args.midi, args.durationMs, args.velocity);
+    const node = this.queue(preset, when, args.midi, args.durationMs, args.velocity);
+    if (args.sustainKey && node) {
+      this.activeNodes.set(args.sustainKey, node);
+    }
     void this.loadPreset(args.presetKey).catch(() => undefined);
+  }
+
+  stopNote(sustainKey: string): void {
+    const audioContext = this.audioContext;
+    const node = this.activeNodes.get(sustainKey);
+    if (!node || !audioContext) return;
+    this.activeNodes.delete(sustainKey);
+    const t = audioContext.currentTime;
+    try {
+      node.gain.gain.cancelScheduledValues(t);
+      node.gain.gain.setValueAtTime(node.gain.gain.value, t);
+      node.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+      node.oscillator.stop(t + 0.09);
+    } catch {
+      // node may have already ended
+    }
   }
 
   private queue(
@@ -179,13 +205,13 @@ export class AudioEngine {
     midi: number,
     durationMs: number,
     velocity: number
-  ): void {
+  ): PlayingNode | undefined {
     const audioContext = this.ensureAudioContext();
     const safeVelocity = Math.min(0.95, Math.max(0, velocity));
     const durationSeconds = Math.max(0.08, durationMs / 1000);
 
     if (this.player?.queueWaveTable) {
-      this.player.queueWaveTable(
+      return this.player.queueWaveTable(
         audioContext,
         audioContext.destination,
         preset,
@@ -194,10 +220,9 @@ export class AudioEngine {
         durationSeconds,
         safeVelocity
       );
-      return;
     }
 
-    this.fallbackOscillator(preset, when, midi, durationSeconds, safeVelocity);
+    return this.fallbackOscillator(preset, when, midi, durationSeconds, safeVelocity);
   }
 
   private ensureAudioContext(): AudioContext {
@@ -324,7 +349,7 @@ export class AudioEngine {
     midi: number,
     durationSeconds: number,
     velocity: number
-  ): void {
+  ): PlayingNode {
     const audioContext = this.ensureAudioContext();
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
@@ -346,6 +371,7 @@ export class AudioEngine {
     gain.connect(audioContext.destination);
     oscillator.start(when);
     oscillator.stop(when + durationSeconds + 0.04);
+    return { oscillator, gain };
   }
 
   private playHtmlBeep(): void {

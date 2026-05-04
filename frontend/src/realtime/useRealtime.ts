@@ -29,6 +29,7 @@ export function useRealtime() {
   const [error, setError] = useState<string | undefined>();
   const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState(0);
   const [groupNotes, setGroupNotes] = useState<GroupPlayNote[]>([]);
+  const [groupStops, setGroupStops] = useState<string[]>([]);
   const [latestJudgement, setLatestJudgement] = useState<NoteJudgement | undefined>();
   const wsRef = useRef<WebSocket | null>(null);
   const clockTimerRef = useRef<number | undefined>();
@@ -125,6 +126,9 @@ export function useRealtime() {
             }
           ].slice(-80)
         );
+        break;
+      case "group_stop_note":
+        setGroupStops((current) => [...current, message.eventId].slice(-80));
         break;
       case "note_judgement":
         setLatestJudgement(message.judgement);
@@ -232,6 +236,7 @@ export function useRealtime() {
     error,
     serverTimeOffsetMs,
     groupNotes,
+    groupStops,
     latestJudgement,
     connect,
     send

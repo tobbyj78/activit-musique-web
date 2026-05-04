@@ -206,12 +206,17 @@ export type ServerMessage =
       type: "group_play_note";
       partId: string;
       noteId: string;
+      eventId?: string;
       midi: number;
       presetKey: string;
       durationMs: number;
       velocity: number;
       playAtServerMs: number;
       source: GroupPlayNoteSource;
+    }
+  | {
+      type: "group_stop_note";
+      eventId: string;
     }
   | {
       type: "note_judgement";

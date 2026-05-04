@@ -35,7 +35,7 @@ const DISCONNECT_GRACE_MS = 30_000;
 const JUDGE_DELAY_MS = 140;
 const OUTPUT_DELAY_MS = 220;
 const LIVE_PLAY_DELAY_MS = 30;
-const LIVE_PLAY_DURATION_MS = 700;
+const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
@@ -614,6 +614,7 @@ function handleInputDown(
         type: "group_play_note",
         partId: part.id,
         noteId: `live:${message.eventId}`,
+        eventId: message.eventId,
         midi: message.midi,
         presetKey: part.soundPresetKey,
         durationMs: LIVE_PLAY_DURATION_MS,
@@ -690,6 +691,7 @@ function handleInputUp(
         state.activeKeysByStudent.delete(student.studentId);
       }
     }
+    broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
     broadcastStateSoon(state);
     return;
   }

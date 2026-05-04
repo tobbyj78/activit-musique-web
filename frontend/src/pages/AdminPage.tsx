@@ -31,6 +31,7 @@ type AdminPageProps = {
   audioReady: boolean;
   serverTimeOffsetMs: number;
   groupNotes: GroupPlayNote[];
+  groupStops: string[];
   onUnlockAudio(): Promise<void>;
 };
 
@@ -46,9 +47,11 @@ export function AdminPage({
   audioReady,
   serverTimeOffsetMs,
   groupNotes,
+  groupStops,
   onUnlockAudio
 }: AdminPageProps) {
   const playedNotesRef = useRef(new Set<string>());
+  const stoppedNotesRef = useRef(new Set<string>());
   const [drillPartId, setDrillPartId] = useState<string | undefined>();
 
   useEffect(() => {
@@ -63,11 +66,21 @@ export function AdminPage({
           durationMs: note.durationMs,
           velocity: note.velocity,
           playAtServerMs: note.playAtServerMs,
-          serverTimeOffsetMs
+          serverTimeOffsetMs,
+          sustainKey: note.eventId
         })
         .catch(() => undefined);
     }
   }, [audioEngine, audioReady, groupNotes, serverTimeOffsetMs]);
+
+  useEffect(() => {
+    if (!audioReady) return;
+    for (const eventId of groupStops) {
+      if (stoppedNotesRef.current.has(eventId)) continue;
+      stoppedNotesRef.current.add(eventId);
+      audioEngine.stopNote(eventId);
+    }
+  }, [audioEngine, audioReady, groupStops]);
 
   useEffect(() => {
     if (
