@@ -49,7 +49,7 @@ export function NoteHighway({
     <section className="note-highway" aria-label="Notes a jouer">
       <div className="lane-labels">
         {part.lanes.map((lane) => (
-          <span key={lane.midi}>{lane.label}</span>
+          <span key={lane.midi}></span>
         ))}
       </div>
       <div className="highway-board">
@@ -83,7 +83,6 @@ export function NoteHighway({
                 height: `${height}%`
               }}
             >
-              {note.note}
             </div>
           );
         })}

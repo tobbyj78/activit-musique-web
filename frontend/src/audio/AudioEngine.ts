@@ -16,6 +16,12 @@ type WebAudioFontPlayerLike = {
       audioContext: AudioContext,
       variableName: string
     ) => void;
+    startLoad?: (
+      audioContext: AudioContext,
+      url: string,
+      variableName: string
+    ) => void;
+    waitLoad?: (callback: () => void) => void;
   };
   queueWaveTable?: (
     audioContext: AudioContext,
@@ -52,6 +58,11 @@ export class AudioEngine {
   private noteUrls = new Map<string, string>();
   private beepUrl?: string;
   private activeNodes = new Map<string, PlayingNode>();
+
+  private masterGain?: GainNode;
+  private dryGain?: GainNode;
+  private wetGain?: GainNode;
+  private reverbNode?: ConvolverNode;
 
   async unlock(): Promise<void> {
     const audioContext = this.ensureAudioContext();
@@ -213,7 +224,7 @@ export class AudioEngine {
     if (this.player?.queueWaveTable) {
       return this.player.queueWaveTable(
         audioContext,
-        audioContext.destination,
+        this.masterGain ?? audioContext.destination,
         preset,
         when,
         midi,
@@ -234,9 +245,41 @@ export class AudioEngine {
       }
 
       this.audioContext = new AudioContextConstructor();
+
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.gain.value = 1.0;
+      
+      this.reverbNode = this.audioContext.createConvolver();
+      this.buildImpulse(2.0, this.audioContext, this.reverbNode);
+
+      this.dryGain = this.audioContext.createGain();
+      this.dryGain.gain.value = 0.85;
+
+      this.wetGain = this.audioContext.createGain();
+      this.wetGain.gain.value = 0.25;
+
+      this.masterGain.connect(this.dryGain);
+      this.dryGain.connect(this.audioContext.destination);
+
+      this.masterGain.connect(this.reverbNode);
+      this.reverbNode.connect(this.wetGain);
+      this.wetGain.connect(this.audioContext.destination);
     }
 
     return this.audioContext;
+  }
+
+  private buildImpulse(dur: number, ac: AudioContext, reverb: ConvolverNode) {
+    const sr = ac.sampleRate;
+    const len = Math.floor(sr * dur);
+    const buf = ac.createBuffer(2, len, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+      }
+    }
+    reverb.buffer = buf;
   }
 
   private async resumeIfNeeded(): Promise<void> {
@@ -249,7 +292,7 @@ export class AudioEngine {
   private primeContext(audioContext: AudioContext): void {
     const gain = audioContext.createGain();
     gain.gain.value = 0.0001;
-    gain.connect(audioContext.destination);
+    gain.connect(this.masterGain ?? audioContext.destination);
     const oscillator = audioContext.createOscillator();
     oscillator.connect(gain);
     oscillator.start(audioContext.currentTime);
@@ -283,29 +326,54 @@ export class AudioEngine {
       return existing;
     }
 
-    const promise = (async () => {
-      const player = await this.ensurePlayer();
-      await this.loadScript(preset.file);
-      const sourceValue = window[preset.variableName] as
-        | (WebAudioFontPreset & { zones?: unknown[] })
-        | undefined;
-      let loadedPreset: WebAudioFontPreset = sourceValue ?? {
-        waveType: "sine",
-        gain: 0.3
-      };
-      if (preset.copyKey && sourceValue && Array.isArray(sourceValue.zones)) {
-        loadedPreset = {
-          ...sourceValue,
-          zones: sourceValue.zones.map((zone) => ({ ...(zone as object) }))
-        } as WebAudioFontPreset;
-      }
-      player.loader?.decodeAfterLoading?.(
-        this.ensureAudioContext(),
-        preset.variableName
-      );
-      this.loadedPresets.set(preset.key, loadedPreset);
-      return loadedPreset;
-    })();
+    const promise = new Promise<WebAudioFontPreset>((resolve, reject) => {
+      this.ensurePlayer().then(player => {
+        if (!player.loader?.startLoad || !player.loader?.waitLoad) {
+          // fallback if loader is not fully featured
+          this.loadScript(preset.file).then(() => {
+            const sourceValue = window[preset.variableName] as
+              | (WebAudioFontPreset & { zones?: unknown[] })
+              | undefined;
+            let loadedPreset: WebAudioFontPreset = sourceValue ?? {
+              waveType: "sine",
+              gain: 0.3
+            };
+            if (preset.copyKey && sourceValue && Array.isArray(sourceValue.zones)) {
+              loadedPreset = {
+                ...sourceValue,
+                zones: sourceValue.zones.map((zone) => ({ ...(zone as object) }))
+              } as WebAudioFontPreset;
+            }
+            player.loader?.decodeAfterLoading?.(
+              this.ensureAudioContext(),
+              preset.variableName
+            );
+            this.loadedPresets.set(preset.key, loadedPreset);
+            resolve(loadedPreset);
+          }).catch(reject);
+          return;
+        }
+
+        player.loader.startLoad(this.ensureAudioContext(), preset.file, preset.variableName);
+        player.loader.waitLoad(() => {
+          const sourceValue = window[preset.variableName] as
+            | (WebAudioFontPreset & { zones?: unknown[] })
+            | undefined;
+          let loadedPreset: WebAudioFontPreset = sourceValue ?? {
+            waveType: "sine",
+            gain: 0.3
+          };
+          if (preset.copyKey && sourceValue && Array.isArray(sourceValue.zones)) {
+            loadedPreset = {
+              ...sourceValue,
+              zones: sourceValue.zones.map((zone) => ({ ...(zone as object) }))
+            } as WebAudioFontPreset;
+          }
+          this.loadedPresets.set(preset.key, loadedPreset);
+          resolve(loadedPreset);
+        });
+      }).catch(reject);
+    });
 
     this.presetPromises.set(preset.key, promise);
     return promise;
@@ -368,7 +436,7 @@ export class AudioEngine {
     );
 
     oscillator.connect(gain);
-    gain.connect(audioContext.destination);
+    gain.connect(this.masterGain ?? audioContext.destination);
     oscillator.start(when);
     oscillator.stop(when + durationSeconds + 0.04);
     return { oscillator, gain };

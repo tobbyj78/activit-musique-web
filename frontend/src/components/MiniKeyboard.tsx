@@ -40,7 +40,6 @@ export function MiniKeyboard({
           if (readOnly) {
             return (
               <div key={lane.midi} className={className}>
-                <span>{lane.label}</span>
               </div>
             );
           }
@@ -71,7 +70,6 @@ export function MiniKeyboard({
                 }
               }}
             >
-              <span>{lane.label}</span>
             </button>
           );
         })}

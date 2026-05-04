@@ -1,10 +1,3 @@
-Dans la pahse #3 et phase #4 : le son du piano doit faire un son de vrai piano, et non un son synthétique comme c'est le cas ici (peut être que utiliser la bibliothèque webaudiofont marcherais ?).
-
-Pour la phase #7 et phase #8 :
-le son du piano fait le son de l'intrument associé au groupe,  et non un son synthétique comme c'est le cas ici (peut être que utiliser la bibliothèque webaudiofont marcherais ?) regarde le fichier orchestre.html, c'est un site qui permet de récupérer le fichier orchestre.json et de le jouer avec de très bon sons.
-Je veux aussi que si un élève presse durablement la touche, le son reste sur la durée, jusqu'à ce que la touche est relachée.
-
----
 
 ## État d'implémentation (session 2026-05-04)
 

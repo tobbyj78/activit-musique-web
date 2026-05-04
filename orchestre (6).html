@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orchestre JSON</title>
+<script src="https://surikov.github.io/webaudiofont/npm/dist/WebAudioFontPlayer.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0d0b; --bg2: #1a1814; --bg3: #252320;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --gold: #c9a84c; --gold2: #e8c97a; --cream: #f0e8d8;
+    --muted: #7a7268; --ok: #4a8a5a; --err: #c05040;
+  }
+  body {
+    background: var(--bg); color: var(--cream);
+    font-family: Georgia, serif; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 3rem 1.5rem 4rem;
+  }
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header h1 { font-size: clamp(1.6rem, 3.5vw, 2.5rem); color: var(--gold2); }
+  header p { font-style: italic; color: var(--muted); margin-top: 0.4rem; font-size: 0.9rem; }
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+    width: 100%; max-width: 740px; margin-bottom: 1rem;
+  }
+  .card-title { font-family: monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+  #drop-zone {
+    border: 1.5px dashed var(--border2); border-radius: 8px;
+    padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s; position: relative;
+  }
+  #drop-zone:hover, #drop-zone.over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+  #drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .dz-icon { font-size: 2rem; display: block; margin-bottom: 0.75rem; }
+  .dz-label { color: var(--muted); font-size: 0.95rem; }
+  .dz-sub { color: var(--muted); font-size: 0.75rem; margin-top: 0.3rem; font-family: monospace; }
+  #piece-card { display: none; }
+  #piece-title { font-size: 1.1rem; font-weight: bold; color: var(--gold2); margin-bottom: 0.2rem; }
+  #piece-meta { font-size: 0.78rem; color: var(--muted); font-family: monospace; }
+  #inst-card { display: none; }
+  .inst-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .chip {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+    display: flex; align-items: center; gap: 9px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s; user-select: none;
+  }
+  .chip.on { border-color: var(--gold); background: rgba(201,168,76,0.07); }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.15s; }
+  .chip.on .dot { background: var(--gold); }
+  .chip-name { font-size: 0.8rem; color: var(--cream); }
+  .chip-sub { font-size: 0.67rem; color: var(--muted); font-family: monospace; }
+  #player-card { display: none; }
+  .transport { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  #play-btn {
+    width: 50px; height: 50px; border-radius: 50%; background: var(--gold); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+  }
+  #play-btn:hover { background: var(--gold2); }
+  #play-btn:active { transform: scale(0.96); }
+  #stop-btn {
+    background: none; border: 1px solid var(--border2); border-radius: 7px;
+    padding: 7px 14px; color: var(--muted); font-family: monospace; font-size: 0.75rem; cursor: pointer; transition: color 0.15s;
+  }
+  #stop-btn:hover { color: var(--cream); }
+  .time-disp { font-family: monospace; font-size: 1.4rem; color: var(--cream); min-width: 3.5rem; }
+  .prog-wrap { flex: 1; min-width: 180px; }
+  #prog-bar { height: 4px; background: var(--bg3); border-radius: 2px; }
+  #prog-fill { height: 100%; background: var(--gold); width: 0%; border-radius: 2px; }
+  .ctrl-row { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 3px; }
+  .ctrl label { font-family: monospace; font-size: 0.67rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .ctrl input[type=range] { width: 110px; accent-color: var(--gold); cursor: pointer; }
+  .ctrl .cval { font-family: monospace; font-size: 0.72rem; color: var(--gold2); }
+  #status { font-family: monospace; font-size: 0.78rem; color: var(--muted); margin-top: 0.75rem; min-height: 1.1em; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  #load-bar { display: none; margin-top: 0.6rem; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  #load-fill { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Orchestre JSON</h1>
+  <p>Chargez une partition JSON pour l'écouter avec de vrais sons d'orchestre</p>
+</header>
+
+<div class="card">
+  <div id="drop-zone">
+    <input type="file" id="file-input" accept=".json">
+    <span class="dz-icon">🎼</span>
+    <div class="dz-label">Déposez votre fichier JSON ici</div>
+    <div class="dz-sub">ou cliquez pour parcourir</div>
+  </div>
+</div>
+
+<div class="card" id="piece-card">
+  <div id="piece-title">—</div>
+  <div id="piece-meta">—</div>
+</div>
+
+<div class="card" id="inst-card">
+  <div class="card-title">Instruments — cliquez pour activer / désactiver</div>
+  <div class="inst-grid" id="inst-grid"></div>
+</div>
+
+<div class="card" id="player-card">
+  <div class="transport">
+    <button id="play-btn">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="#0e0d0b" d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div class="time-disp" id="time-disp">0:00</div>
+    <div class="prog-wrap"><div id="prog-bar"><div id="prog-fill"></div></div></div>
+    <button id="stop-btn">■ Stop</button>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl">
+      <label>Volume</label>
+      <input type="range" id="vol" min="0" max="2" value="1" step="0.05">
+      <span class="cval" id="vol-v">100%</span>
+    </div>
+    <div class="ctrl">
+      <label>Tempo ×</label>
+      <input type="range" id="tempo" min="0.4" max="1.8" value="1" step="0.05">
+      <span class="cval" id="tempo-v">×1.00</span>
+    </div>
+    <div class="ctrl">
+      <label>Reverb</label>
+      <input type="range" id="reverb" min="0" max="0.9" value="0.25" step="0.05">
+      <span class="cval" id="reverb-v">25%</span>
+    </div>
+  </div>
+  <div id="load-bar"><div id="load-fill"></div></div>
+  <div id="status"></div>
+</div>
+
+<script>
+const BASE = 'https://surikov.github.io/webaudiofontdata/sound/';
+
+// URLs et variables vérifiées manuellement sur surikov.github.io
+const WAF_MAP = {
+  'Flute':        { url: BASE+'0730_GeneralUserGS_sf2_file.js', var: '_tone_0730_GeneralUserGS_sf2_file' },
+  'Oboe':         { url: BASE+'0680_GeneralUserGS_sf2_file.js', var: '_tone_0680_GeneralUserGS_sf2_file' },
+  'Clarinet':     { url: BASE+'0710_GeneralUserGS_sf2_file.js', var: '_tone_0710_GeneralUserGS_sf2_file' },
+  'Bassoon':      { url: BASE+'0700_GeneralUserGS_sf2_file.js', var: '_tone_0700_GeneralUserGS_sf2_file' },
+  'Horn':         { url: BASE+'0602_GeneralUserGS_sf2_file.js', var: '_tone_0602_GeneralUserGS_sf2_file' },
+  'Trumpet':      { url: BASE+'0560_GeneralUserGS_sf2_file.js', var: '_tone_0560_GeneralUserGS_sf2_file' },
+  'Trombone':     { url: BASE+'0570_GeneralUserGS_sf2_file.js', var: '_tone_0570_GeneralUserGS_sf2_file' },
+  'Timpani':      { url: BASE+'0470_GeneralUserGS_sf2_file.js', var: '_tone_0470_GeneralUserGS_sf2_file' },
+  'Violins_I':    { url: BASE+'0402_GeneralUserGS_sf2_file.js', var: '_tone_0402_GeneralUserGS_sf2_file', copyVar: null },
+  'Violin I':     { url: BASE+'0402_GeneralUserGS_sf2_file.js', var: '_tone_0402_GeneralUserGS_sf2_file', copyVar: null },
+  'Violins_II':   { url: BASE+'0402_GeneralUserGS_sf2_file.js', var: '_tone_0402_GeneralUserGS_sf2_file', copyVar: '_tone_0402_copy_II' },
+  'Violin II':    { url: BASE+'0402_GeneralUserGS_sf2_file.js', var: '_tone_0402_GeneralUserGS_sf2_file', copyVar: '_tone_0402_copy_II' },
+  'Violas':       { url: BASE+'0410_GeneralUserGS_sf2_file.js', var: '_tone_0410_GeneralUserGS_sf2_file' },
+  'Viola':        { url: BASE+'0410_GeneralUserGS_sf2_file.js', var: '_tone_0410_GeneralUserGS_sf2_file' },
+  'Violoncellos': { url: BASE+'0420_GeneralUserGS_sf2_file.js', var: '_tone_0420_GeneralUserGS_sf2_file' },
+  'Cello':        { url: BASE+'0420_GeneralUserGS_sf2_file.js', var: '_tone_0420_GeneralUserGS_sf2_file' },
+  'Contrabasses': { url: BASE+'0430_GeneralUserGS_sf2_file.js', var: '_tone_0430_GeneralUserGS_sf2_file' },
+  'Contrabass':   { url: BASE+'0430_GeneralUserGS_sf2_file.js', var: '_tone_0430_GeneralUserGS_sf2_file' },
+};
+
+// ── Note → MIDI ───────────────────────────────────────────────────────────
+const NOTE_SEMI = {C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};
+function noteToMidi(s) {
+  const m = s.match(/^([A-Ga-g][b#]?)(-?\d+)$/);
+  if (!m) return null;
+  const semi = NOTE_SEMI[m[1]];
+  return semi !== undefined ? (parseInt(m[2]) + 1) * 12 + semi : null;
+}
+
+// ── État ──────────────────────────────────────────────────────────────────
+let parsedData = null, activeInst = new Set();
+let allNotes = [], noteIndex = 0;
+let isPlaying = false, startWallMs = 0, pauseMs = 0, totalMs = 0;
+let tempoMul = 1.0, masterVol = 1.0, reverbAmount = 0.25;
+let schedulerTimer = null, rafHandle = null;
+let ac = null, wafPlayer = null, masterGain = null, reverbNode = null, dryGain = null, wetGain = null;
+let loadedVars = {};  // varName → preset object
+
+const LOOKAHEAD_MS = 250, SCHEDULE_TICK = 80;
+
+function initAC() {
+  if (ac) return;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  wafPlayer = new WebAudioFontPlayer();
+  masterGain = ac.createGain(); masterGain.gain.value = masterVol;
+  reverbNode = ac.createConvolver(); buildImpulse(2.0);
+  dryGain = ac.createGain(); dryGain.gain.value = 1 - reverbAmount * 0.5;
+  wetGain = ac.createGain(); wetGain.gain.value = reverbAmount;
+  masterGain.connect(dryGain); dryGain.connect(ac.destination);
+  masterGain.connect(reverbNode); reverbNode.connect(wetGain); wetGain.connect(ac.destination);
+}
+
+function buildImpulse(dur) {
+  const sr = ac.sampleRate, len = Math.floor(sr * dur);
+  const buf = ac.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/len, 2.5);
+  }
+  reverbNode.buffer = buf;
+}
+
+function loadPreset(info) {
+  // Si copyVar défini, on crée une copie indépendante du preset (évite les conflits d'enveloppe entre instruments)
+  const key = info.copyVar || info.var;
+  return new Promise((resolve, reject) => {
+    if (loadedVars[key]) { resolve(loadedVars[key]); return; }
+    wafPlayer.loader.startLoad(ac, info.url, info.var);
+    wafPlayer.loader.waitLoad(() => {
+      const src = window[info.var];
+      if (!src) { reject(new Error('Preset introuvable : ' + info.var)); return; }
+      // deep copy si copyVar : les deux violons ont des objets distincts
+      const preset = info.copyVar ? Object.assign({}, src, { zones: src.zones.map(z => Object.assign({}, z)) }) : src;
+      loadedVars[key] = preset;
+      resolve(preset);
+    });
+  });
+}
+
+function getPreset(name) {
+  const info = WAF_MAP[name];
+  if (!info) return null;
+  return loadedVars[info.copyVar || info.var] || null;
+}
+
+async function loadNeededFonts() {
+  // Déduplique par clé effective (copyVar ou var)
+  const needed = new Map();
+  for (const [name] of Object.entries(parsedData.instruments)) {
+    const info = WAF_MAP[name];
+    const key = info?.copyVar || info?.var;
+    if (activeInst.has(name) && info && !loadedVars[key])
+      needed.set(key, { info, name });
+  }
+  if (!needed.size) return;
+
+  const bar = document.getElementById('load-bar');
+  const fill = document.getElementById('load-fill');
+  bar.style.display = 'block';
+  let done = 0;
+
+  for (const [, { info, name }] of needed) {
+    setStatus('Téléchargement : ' + name + '…');
+    await loadPreset(info);
+    done++;
+    fill.style.width = Math.round(done / needed.size * 100) + '%';
+  }
+  bar.style.display = 'none'; fill.style.width = '0%';
+}
+
+function buildNoteList() {
+  allNotes = [];
+  for (const [name, instData] of Object.entries(parsedData.instruments)) {
+    if (!activeInst.has(name)) continue;
+    const info = WAF_MAP[name];
+    if (!info) continue;
+    const preset = getPreset(name);
+    if (!preset) continue;
+    for (const n of instData.notes) {
+      if (!n.duration_ms || n.duration_ms <= 0) continue;
+      const midi = noteToMidi(n.note);
+      if (midi === null) continue;
+      allNotes.push({ t_ms: n.timestamp_ms, dur_ms: n.duration_ms, midi, vel: n.velocity ?? 0.7, preset });
+    }
+  }
+  allNotes.sort((a, b) => a.t_ms - b.t_ms);
+}
+
+function schedulerTick() {
+  if (!isPlaying) return;
+  const wallElapsed    = performance.now() - startWallMs;
+  const musicElapsed   = wallElapsed * tempoMul;
+  const lookaheadMusic = (wallElapsed + LOOKAHEAD_MS) * tempoMul;
+  while (noteIndex < allNotes.length) {
+    const n = allNotes[noteIndex];
+    if (n.t_ms > lookaheadMusic) break;
+    if (n.t_ms >= musicElapsed - 80) {
+      const t = ac.currentTime + Math.max(0, (n.t_ms / tempoMul - wallElapsed) / 1000);
+      const dur = n.dur_ms / 1000 / tempoMul * 0.88;
+      try { wafPlayer.queueWaveTable(ac, masterGain, n.preset, t, n.midi, dur, n.vel * masterVol * 0.55); } catch(e) {}
+    }
+    noteIndex++;
+  }
+}
+
+async function startPlay() {
+  if (!parsedData) return;
+  initAC();
+  if (ac.state === 'suspended') await ac.resume();
+  stopAll(false);
+  setStatus('Téléchargement des samples…');
+  try { await loadNeededFonts(); } catch(e) { setStatus('Erreur : ' + e.message, 'err'); return; }
+  buildNoteList();
+  noteIndex = 0;
+  const startMusic = pauseMs * tempoMul;
+  while (noteIndex < allNotes.length && allNotes[noteIndex].t_ms < startMusic - 80) noteIndex++;
+  startWallMs = performance.now() - pauseMs;
+  pauseMs = 0; isPlaying = true; updateBtn();
+  setStatus('Lecture en cours…', 'ok');
+  schedulerTimer = setInterval(schedulerTick, SCHEDULE_TICK);
+  schedulerTick(); animateUI();
+}
+
+function pauseAll() { pauseMs = performance.now() - startWallMs; stopAll(false); }
+
+function stopAll(reset = true) {
+  clearInterval(schedulerTimer); schedulerTimer = null;
+  cancelAnimationFrame(rafHandle); rafHandle = null;
+  if (wafPlayer && ac) wafPlayer.cancelQueue(ac);
+  isPlaying = false;
+  if (reset) { pauseMs = 0; setProg(0); setTimeDisp(0); }
+  updateBtn();
+}
+
+function animateUI() {
+  if (!isPlaying) return;
+  const wall = performance.now() - startWallMs;
+  setProg(wall / totalMs); setTimeDisp(wall);
+  if (wall >= totalMs + 800) { stopAll(true); setStatus('Fin de lecture', 'ok'); return; }
+  rafHandle = requestAnimationFrame(animateUI);
+}
+function setProg(p) { document.getElementById('prog-fill').style.width = Math.min(100, Math.max(0, p*100)) + '%'; }
+function setTimeDisp(ms) { const s = Math.max(0, Math.floor(ms/1000)); document.getElementById('time-disp').textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function setStatus(msg, cls) { const el = document.getElementById('status'); el.textContent = msg; el.className = cls||''; }
+function updateBtn() {
+  document.getElementById('play-btn').innerHTML = isPlaying
+    ? '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#0e0d0b" d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#0e0d0b" d="M8 5v14l11-7z"/></svg>';
+}
+
+function loadJSON(text, fname) {
+  let data;
+  try { data = JSON.parse(text); } catch(e) { setStatus('JSON invalide', 'err'); return; }
+  if (!data.instruments || !data.meta) { setStatus('Format non reconnu', 'err'); return; }
+  stopAll(true);
+  parsedData = data; totalMs = data.meta.duration_ms;
+  document.getElementById('piece-title').textContent = data.meta.piece || fname;
+  document.getElementById('piece-meta').textContent =
+    [data.meta.excerpt, data.meta.tempo_bpm+' BPM', data.meta.time_signature, (totalMs/1000).toFixed(1)+' s'].filter(Boolean).join(' · ');
+  document.getElementById('piece-card').style.display = 'block';
+
+  const grid = document.getElementById('inst-grid');
+  grid.innerHTML = ''; activeInst = new Set();
+  for (const [name, inst] of Object.entries(data.instruments)) {
+    activeInst.add(name);
+    const hasSf = !!WAF_MAP[name];
+    const count = inst.note_count || inst.notes?.length || '?';
+    const chip = document.createElement('div');
+    chip.className = 'chip on';
+    chip.innerHTML = `<div class="dot"></div><div><div class="chip-name">${name}</div><div class="chip-sub">${count} notes${hasSf?'':' ⚠'}</div></div>`;
+    chip.addEventListener('click', () => { const on = activeInst.has(name); on?activeInst.delete(name):activeInst.add(name); chip.classList.toggle('on',!on); });
+    grid.appendChild(chip);
+  }
+  document.getElementById('inst-card').style.display = 'block';
+  document.getElementById('player-card').style.display = 'block';
+  setStatus('Prêt — appuyez sur ▶', 'ok');
+}
+
+document.getElementById('play-btn').addEventListener('click', () => { if (isPlaying) pauseAll(); else startPlay(); });
+document.getElementById('stop-btn').addEventListener('click', () => { stopAll(true); setStatus('Arrêté'); });
+document.getElementById('vol').addEventListener('input', function() { masterVol=parseFloat(this.value); if(masterGain)masterGain.gain.value=masterVol; document.getElementById('vol-v').textContent=Math.round(masterVol*100)+'%'; });
+document.getElementById('tempo').addEventListener('input', function() { tempoMul=parseFloat(this.value); document.getElementById('tempo-v').textContent='×'+tempoMul.toFixed(2); });
+document.getElementById('reverb').addEventListener('input', function() { reverbAmount=parseFloat(this.value); if(wetGain)wetGain.gain.value=reverbAmount; if(dryGain)dryGain.gain.value=Math.max(0,1-reverbAmount*0.5); document.getElementById('reverb-v').textContent=Math.round(reverbAmount*100)+'%'; });
+
+const dz=document.getElementById('drop-zone'), fi=document.getElementById('file-input');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);});
+fi.addEventListener('change', ()=>{if(fi.files[0])readFile(fi.files[0]);});
+function readFile(f){const r=new FileReader();r.onload=e=>loadJSON(e.target.result,f.name);r.readAsText(f);}
+</script>
+</body>
+</html>
