@@ -549,7 +549,19 @@ function scheduleAggregatedPlayback(
             if (note.autoPlay) {
               velocity = Math.min(0.95, note.velocity);
             } else {
-              return;
+              const correctPressers = countCorrectPressers(
+                state,
+                part.id,
+                note,
+                startAtServerMs + note.timestampMs
+              );
+              if (correctPressers === 0) {
+                return;
+              }
+              velocity = Math.min(
+                0.95,
+                note.velocity * velocityFactorForPressers(correctPressers)
+              );
             }
           } else {
             velocity = Math.min(0.95, note.velocity);
@@ -570,6 +582,22 @@ function scheduleAggregatedPlayback(
       );
     }
   }
+}
+
+function velocityFactorForPressers(count: number): number {
+  if (count <= 0) {
+    return 0;
+  }
+  if (count === 1) {
+    return 0.3;
+  }
+  if (count === 2) {
+    return 0.7;
+  }
+  if (count === 3) {
+    return 0.9;
+  }
+  return 1;
 }
 
 function handleInputDown(
@@ -622,21 +650,6 @@ function handleInputDown(
   const part = score.parts.find((candidate) => candidate.id === room.partId);
   if (!part) {
     return;
-  }
-
-  if (!state.mutedGroups.has(part.id) && state.phase !== "phase8_orchestra_performance") {
-    broadcastToAdmins(state, {
-      type: "group_play_note",
-      partId: part.id,
-      noteId: `live:${message.eventId}`,
-      eventId: message.eventId,
-      midi: message.midi,
-      presetKey: part.soundPresetKey,
-      durationMs: LIVE_PLAY_DURATION_MS,
-      velocity: 0.35,
-      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
-      source: "live"
-    });
   }
 
   const event: InputEventRecord = {
@@ -705,10 +718,6 @@ function handleInputUp(
   const event = state.inputs.get(message.eventId);
   if (!event || event.studentId !== student.studentId) {
     return;
-  }
-
-  if (state.phase !== "phase8_orchestra_performance") {
-    broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
   }
 
   event.serverUpAtMs = message.estimatedServerEventAtMs;
