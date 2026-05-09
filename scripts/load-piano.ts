@@ -171,7 +171,11 @@ class RealtimeClient {
       timeoutMs,
       description
     );
-    return message.state;
+    void message;
+    if (!this.state) {
+      throw new Error(`${this.label} matched ${description} without local state`);
+    }
+    return this.state;
   }
 
   private handleMessage(raw: unknown): void {
@@ -193,7 +197,14 @@ class RealtimeClient {
         this.sessionToken = message.sessionToken;
       }
     } else if (message.type === "state") {
-      this.state = message.state;
+      if (this.state) {
+        this.state = {
+          ...message.state,
+          scores: this.state.scores
+        };
+      } else {
+        metrics.errors.push(`${this.label} received state before welcome`);
+      }
       const instantOffset = message.serverNowMs - Date.now();
       this.serverTimeOffsetMs = this.serverTimeOffsetMs * 0.8 + instantOffset * 0.2;
     } else if (message.type === "error") {

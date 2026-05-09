@@ -82,7 +82,14 @@ export function useRealtime() {
         }
         break;
       case "state":
-        setState(message.state);
+        setState((current) =>
+          current
+            ? {
+                ...message.state,
+                scores: current.scores
+              }
+            : current
+        );
         setServerTimeOffsetMs((previous) => {
           const instantOffset = message.serverNowMs - Date.now();
           return previous * 0.8 + instantOffset * 0.2;

@@ -5,6 +5,7 @@ import type {
   NoteJudgement,
   PartPublicRoom,
   PerformanceStatus,
+  PublicRuntimeState,
   PublicState,
   ScoreId,
   StudentPublicSession,
@@ -140,11 +141,17 @@ export function resetRuntimeState(state: RuntimeState): void {
 
 export function publicState(state: RuntimeState): PublicState {
   return {
+    ...publicRuntimeState(state),
+    scores: state.scores
+  };
+}
+
+export function publicRuntimeState(state: RuntimeState): PublicRuntimeState {
+  return {
     phase: state.phase,
     performanceStatus: state.performanceStatus,
     performanceStartAtServerMs: state.performanceStartAtServerMs,
     currentScoreId: state.currentScoreId,
-    scores: state.scores,
     parts: Array.from(state.parts.values()).map(toPublicPartRoom),
     students: Array.from(state.students.values()).map((student) =>
       toPublicStudentSession(state, student)

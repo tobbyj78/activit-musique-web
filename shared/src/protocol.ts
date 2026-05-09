@@ -102,6 +102,8 @@ export type PublicState = {
   globalScore: number;
 };
 
+export type PublicRuntimeState = Omit<PublicState, "scores">;
+
 const baseFields = {
   requestId: z.string().optional()
 };
@@ -188,7 +190,7 @@ export type ServerMessage =
     }
   | {
       type: "state";
-      state: PublicState;
+      state: PublicRuntimeState;
       serverNowMs: number;
     }
   | {

@@ -16,6 +16,7 @@ import {
   clearPerformanceTimers,
   getPartForStudent,
   getStudentByConnectionId,
+  publicRuntimeState,
   publicState,
   resetRuntimeState,
   type RuntimeState,
@@ -847,7 +848,7 @@ function broadcastState(state: RuntimeState): void {
   }
   broadcastToAll(state, {
     type: "state",
-    state: publicState(state),
+    state: publicRuntimeState(state),
     serverNowMs: Date.now()
   });
 }
@@ -860,24 +861,26 @@ function broadcastStateSoon(state: RuntimeState): void {
     stateBroadcastTimer = undefined;
     broadcastToAll(state, {
       type: "state",
-      state: publicState(state),
+      state: publicRuntimeState(state),
       serverNowMs: Date.now()
     });
   }, STATE_COALESCE_MS);
 }
 
 function broadcastToAdmins(state: RuntimeState, message: ServerMessage): void {
+  const payload = JSON.stringify(message);
   for (const connection of state.connections.values()) {
     if (connection.role === "admin") {
-      sendToConnection(state, connection.connectionId, message);
+      sendSerialized(connection.ws, payload);
     }
   }
 }
 
 function broadcastToAll(state: RuntimeState, message: ServerMessage): void {
+  const payload = JSON.stringify(message);
   for (const connection of state.connections.values()) {
     if (connection.role) {
-      sendToConnection(state, connection.connectionId, message);
+      sendSerialized(connection.ws, payload);
     }
   }
 }
@@ -896,8 +899,12 @@ function sendToConnection(
 }
 
 function sendRaw(ws: { send(data: string): void }, message: ServerMessage): void {
+  sendSerialized(ws, JSON.stringify(message));
+}
+
+function sendSerialized(ws: { send(data: string): void }, payload: string): void {
   try {
-    ws.send(JSON.stringify(message));
+    ws.send(payload);
   } catch {
     // The close handler will clean up dead connections.
   }
