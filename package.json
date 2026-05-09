@@ -8,6 +8,7 @@
     "dev:frontend": "bun run --cwd frontend dev",
     "dev": "bun run dev:backend & bun run dev:frontend",
     "build": "bun run --cwd frontend build",
-    "check": "bun run --cwd shared check && bun run --cwd backend check && bun run --cwd frontend check"
+    "check": "bun run --cwd shared check && bun run --cwd backend check && bun run --cwd frontend check",
+    "load:piano": "bun scripts/load-piano.ts"
   }
 }
