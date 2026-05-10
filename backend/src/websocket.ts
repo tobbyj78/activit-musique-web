@@ -59,6 +59,8 @@ type BlindPlayingNote = {
 };
 const playingBlindNotes = new Map<string, Map<number, BlindPlayingNote>>();
 
+const blindHeldKeys = new Map<string, Set<number>>(); // studentId -> Set<midi>
+
 let stateBroadcastTimer: ReturnType<typeof setTimeout> | undefined;
 
 function isPracticePhase(phase: AppPhase): boolean {
@@ -972,18 +974,26 @@ function processBlindAlgorithmsDown(
   student: StudentSession,
   message: Extract<ClientMessage, { type: "input_down" }>
 ) {
+  const eventTime = message.estimatedServerEventAtMs;
   const now = Date.now();
+  
+  let held = blindHeldKeys.get(student.studentId);
+  if (!held) {
+    held = new Set();
+    blindHeldKeys.set(student.studentId, held);
+  }
+  held.add(message.midi);
+
   let inputs = recentBlindInputs.get(part.id);
   if (!inputs) {
     inputs = [];
     recentBlindInputs.set(part.id, inputs);
   }
   
-  inputs.push({ studentId: student.studentId, midi: message.midi, timeMs: now });
+  inputs.push({ studentId: student.studentId, midi: message.midi, timeMs: eventTime });
   
-  // Clean old inputs (keep last 200ms)
-  const windowMs = 200;
-  inputs = inputs.filter(i => now - i.timeMs <= windowMs);
+  // Clean old inputs (keep last 400ms relative to current event)
+  inputs = inputs.filter(i => Math.abs(eventTime - i.timeMs) <= 400);
   recentBlindInputs.set(part.id, inputs);
 
   let partNotes = playingBlindNotes.get(part.id);
@@ -1002,26 +1012,26 @@ function processBlindAlgorithmsDown(
   let shouldPlay = false;
   let velocity = 0.8;
   let playingMidi = message.midi;
-  let activeStudents = new Set<string>();
+  let candidateStudents = new Set<string>();
 
   if (algo === "quorum") {
-    const recentSameMidi = inputs.filter(i => i.midi === message.midi && now - i.timeMs <= 120);
+    const recentSameMidi = inputs.filter(i => i.midi === message.midi && eventTime - i.timeMs <= 120 && i.timeMs <= eventTime);
     const uniqueStudents = new Set(recentSameMidi.map(i => i.studentId));
     if (uniqueStudents.size >= 3) {
       shouldPlay = true;
       velocity = 0.8;
-      activeStudents = uniqueStudents;
+      candidateStudents = uniqueStudents;
     }
   } else if (algo === "cohesion") {
-    const recentSameMidi = inputs.filter(i => i.midi === message.midi && now - i.timeMs <= 150);
+    const recentSameMidi = inputs.filter(i => i.midi === message.midi && eventTime - i.timeMs <= 150 && i.timeMs <= eventTime);
     const uniqueStudents = new Set(recentSameMidi.map(i => i.studentId));
     if (uniqueStudents.size >= 2) {
       shouldPlay = true;
       velocity = Math.min(1.0, 0.2 + uniqueStudents.size * 0.15);
-      activeStudents = uniqueStudents;
+      candidateStudents = uniqueStudents;
     }
   } else if (algo === "burst") {
-    const recentRafale = inputs.filter(i => now - i.timeMs <= 80);
+    const recentRafale = inputs.filter(i => eventTime - i.timeMs <= 80 && i.timeMs <= eventTime);
     const uniqueStudentsRafale = new Set(recentRafale.map(i => i.studentId));
     if (uniqueStudentsRafale.size >= 3) {
       const counts = new Map<number, Set<string>>();
@@ -1040,13 +1050,28 @@ function processBlindAlgorithmsDown(
       if (!partNotes.has(playingMidi)) {
         shouldPlay = true;
         velocity = 0.9;
-        activeStudents = counts.get(playingMidi)!;
+        candidateStudents = counts.get(playingMidi)!;
       }
     }
   }
 
   if (shouldPlay) {
     const eventId = `blind:${part.id}:${playingMidi}:${now}`;
+    const activeStudents = new Set<string>();
+    
+    // Only include students who are STILL holding the key
+    for (const sid of candidateStudents) {
+      if (blindHeldKeys.get(sid)?.has(playingMidi)) {
+        activeStudents.add(sid);
+      }
+    }
+    
+    // If somehow everyone already released (unlikely since current student just pressed), 
+    // at least include current student to avoid immediate stop bug
+    if (activeStudents.size === 0) {
+      activeStudents.add(student.studentId);
+    }
+
     partNotes.set(playingMidi, { eventId, midi: playingMidi, activeStudents });
     
     broadcastToAdmins(state, {
@@ -1070,6 +1095,11 @@ function processBlindAlgorithmsUp(
   student: StudentSession,
   message: Extract<ClientMessage, { type: "input_up" }>
 ) {
+  const held = blindHeldKeys.get(student.studentId);
+  if (held) {
+    held.delete(message.midi);
+  }
+
   const partNotes = playingBlindNotes.get(part.id);
   if (!partNotes) return;
 
