@@ -38,6 +38,8 @@ const OUTPUT_DELAY_MS = 220;
 const LIVE_PLAY_DELAY_MS = 30;
 const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
+const DIRECT_PLAY_DURATION_MS = 700;
+const DIRECT_PLAY_VELOCITY = 1.0;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
 
@@ -251,6 +253,15 @@ function handleMessage(
         } else {
           state.mutedGroups.add(message.partId);
         }
+        broadcastState(state);
+      });
+      break;
+    case "admin_set_aggregation_algorithm":
+      withAdmin(state, connectionId, () => {
+        if (state.phase !== "phase1_lobby") {
+          return;
+        }
+        state.aggregationAlgorithm = message.algorithm;
         broadcastState(state);
       });
       break;
@@ -526,10 +537,15 @@ function scheduleAggregatedPlayback(
   startAtServerMs: number,
   mode: PerformanceMode
 ): void {
+  if (mode === "voted" && state.aggregationAlgorithm === "direct") {
+    return;
+  }
+
   const score = state.scores[scoreId];
   for (const part of score.parts) {
     for (const note of part.notes) {
-      const judgeAtMs = startAtServerMs + note.timestampMs + JUDGE_DELAY_MS;
+      const expectedAtServerMs = startAtServerMs + note.timestampMs;
+      const judgeAtMs = expectedAtServerMs + JUDGE_DELAY_MS;
       const delay = Math.max(0, judgeAtMs - Date.now());
 
       state.performanceTimers.push(
@@ -544,15 +560,27 @@ function scheduleAggregatedPlayback(
             return;
           }
 
-          let velocity = note.velocity;
+          const baseVelocity = Math.min(0.95, note.velocity);
+          let velocity: number;
+
           if (mode === "voted") {
-            if (note.autoPlay) {
-              velocity = Math.min(0.95, note.velocity);
+            const algorithm = state.aggregationAlgorithm;
+            const count = countCorrectPressers(state, part.id, note, expectedAtServerMs);
+            if (algorithm === "democratic") {
+              if (count < 1) return;
+              velocity = baseVelocity;
+            } else if (algorithm === "majority") {
+              const groupSize = activeStudentsForPart(state, part.id).length;
+              const threshold = Math.ceil(Math.max(1, groupSize) / 2);
+              if (count < threshold) return;
+              velocity = baseVelocity;
+            } else if (algorithm === "doublure") {
+              velocity = Math.min(baseVelocity, 0.4 + 0.15 * count);
             } else {
               return;
             }
           } else {
-            velocity = Math.min(0.95, note.velocity);
+            velocity = baseVelocity;
           }
 
           broadcastToAdmins(state, {
@@ -563,29 +591,13 @@ function scheduleAggregatedPlayback(
             presetKey: part.soundPresetKey,
             durationMs: Math.max(120, note.durationMs),
             velocity,
-            playAtServerMs: startAtServerMs + note.timestampMs + OUTPUT_DELAY_MS,
+            playAtServerMs: expectedAtServerMs + OUTPUT_DELAY_MS,
             source: "scheduled"
           });
         }, delay)
       );
     }
   }
-}
-
-function velocityFactorForPressers(count: number): number {
-  if (count <= 0) {
-    return 0;
-  }
-  if (count === 1) {
-    return 0.3;
-  }
-  if (count === 2) {
-    return 0.7;
-  }
-  if (count === 3) {
-    return 0.9;
-  }
-  return 1;
 }
 
 function handleInputDown(
@@ -640,7 +652,11 @@ function handleInputDown(
     return;
   }
 
-  if (!state.mutedGroups.has(part.id) && state.phase !== "phase8_orchestra_performance") {
+  if (
+    state.phase === "phase4_performance" &&
+    state.aggregationAlgorithm === "direct" &&
+    !state.mutedGroups.has(part.id)
+  ) {
     broadcastToAdmins(state, {
       type: "group_play_note",
       partId: part.id,
@@ -648,8 +664,8 @@ function handleInputDown(
       eventId: message.eventId,
       midi: message.midi,
       presetKey: part.soundPresetKey,
-      durationMs: LIVE_PLAY_DURATION_MS,
-      velocity: 0.35,
+      durationMs: DIRECT_PLAY_DURATION_MS,
+      velocity: DIRECT_PLAY_VELOCITY,
       playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
       source: "live"
     });
@@ -723,7 +739,10 @@ function handleInputUp(
     return;
   }
 
-  if (state.phase !== "phase8_orchestra_performance") {
+  if (
+    state.phase === "phase4_performance" &&
+    state.aggregationAlgorithm === "direct"
+  ) {
     broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
   }
 
@@ -925,5 +944,3 @@ function sendSerialized(ws: { send(data: string): void }, payload: string): void
     // The close handler will clean up dead connections.
   }
 }
-
-void activeStudentsForPart;

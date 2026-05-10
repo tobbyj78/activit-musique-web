@@ -24,8 +24,16 @@ export const performanceStatusSchema = z.enum([
 
 export const scoreIdSchema = z.enum(["piano_only", "orchestre"]);
 
+export const aggregationAlgorithmSchema = z.enum([
+  "democratic",
+  "majority",
+  "doublure",
+  "direct"
+]);
+
 export type AppPhase = z.infer<typeof appPhaseSchema>;
 export type PerformanceStatus = z.infer<typeof performanceStatusSchema>;
+export type AggregationAlgorithm = z.infer<typeof aggregationAlgorithmSchema>;
 
 export type BaseMessage = {
   type: string;
@@ -100,6 +108,7 @@ export type PublicState = {
   surveyResults: SurveyResults;
   groupScores: GroupScore[];
   globalScore: number;
+  aggregationAlgorithm: AggregationAlgorithm;
 };
 
 export type PublicRuntimeState = Omit<PublicState, "scores">;
@@ -166,6 +175,11 @@ export const clientMessageSchema = z.union([
     ...baseFields,
     type: z.literal("admin_toggle_group_mute"),
     partId: z.string().min(1)
+  }),
+  z.object({
+    ...baseFields,
+    type: z.literal("admin_set_aggregation_algorithm"),
+    algorithm: aggregationAlgorithmSchema
   }),
   z.object({
     ...baseFields,

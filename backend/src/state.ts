@@ -1,4 +1,5 @@
 import type {
+  AggregationAlgorithm,
   AppPhase,
   GroupScore,
   NormalizedScore,
@@ -76,6 +77,8 @@ export type RuntimeState = {
   activeKeysByStudent: Map<string, Set<number>>;
   surveyAnswers: Map<string, Map<string, string>>;
 
+  aggregationAlgorithm: AggregationAlgorithm;
+
   performanceTimers: ReturnType<typeof setTimeout>[];
 };
 
@@ -112,6 +115,7 @@ export function createRuntimeState(
     mutedGroups: new Set(),
     activeKeysByStudent: new Map(),
     surveyAnswers: new Map(),
+    aggregationAlgorithm: "democratic",
     performanceTimers: []
   };
 }
@@ -165,7 +169,8 @@ export function publicRuntimeState(state: RuntimeState): PublicRuntimeState {
     ),
     surveyResults: computeSurveyResults(state),
     groupScores: Array.from(state.groupScores.values()),
-    globalScore: state.globalScore
+    globalScore: state.globalScore,
+    aggregationAlgorithm: state.aggregationAlgorithm
   };
 }
 

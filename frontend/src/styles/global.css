@@ -689,6 +689,69 @@ ul {
   letter-spacing: 0.04em;
 }
 
+.phase1-algo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 18px 24px;
+  border: 1px solid rgba(238, 188, 91, 0.32);
+  border-radius: 20px;
+  background: #15130f;
+  min-width: 240px;
+}
+
+.phase1-algo-label {
+  font-size: 1.05rem;
+  color: #eebc5b;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  align-self: center;
+}
+
+.phase1-algo-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phase1-algo-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 14px;
+  background: #1b1917;
+  border: 1px solid rgba(247, 241, 223, 0.16);
+  border-radius: 10px;
+  color: #f7f1df;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.phase1-algo-option:hover {
+  background: #221f1b;
+}
+
+.phase1-algo-option.is-active {
+  background: #1f2826;
+  border-color: #56d7c4;
+}
+
+.phase1-algo-option-label {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.phase1-algo-option-hint {
+  font-size: 0.78rem;
+  color: #d7cfbe;
+  font-weight: 600;
+}
+
 .phase1-counter {
   display: flex;
   flex-direction: column;

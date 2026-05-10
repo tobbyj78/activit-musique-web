@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import type {
+  AggregationAlgorithm,
   ClientMessage,
   GroupScore,
   PartPublicRoom,
@@ -38,6 +39,13 @@ type AdminPageProps = {
 const QR_TARGET_URL = "https://jaffrain.xyz";
 const HOTSPOT_NAME = "Iphone de Tom";
 const HOTSPOT_PASSWORD = "244466666";
+
+const ALGORITHM_OPTIONS: { id: AggregationAlgorithm; label: string; hint: string }[] = [
+  { id: "democratic", label: "Démocratique", hint: "≥1 joueur joue → la note sonne" },
+  { id: "majority", label: "Majorité", hint: "≥moitié du groupe → la note sonne" },
+  { id: "doublure", label: "Doublure", hint: "Mélodie auto, +volume par joueur" },
+  { id: "direct", label: "Direct (solo)", hint: "Chaque pression joue à fond" }
+];
 
 export function AdminPage({
   state,
@@ -128,7 +136,14 @@ export function AdminPage({
       {error ? <div className="admin-error">{error}</div> : null}
 
       {phase === "phase1_lobby" ? (
-        <Phase1View students={state.students} onAdvance={advance} />
+        <Phase1View
+          students={state.students}
+          aggregationAlgorithm={state.aggregationAlgorithm}
+          onSetAlgorithm={(algorithm) =>
+            send({ type: "admin_set_aggregation_algorithm", algorithm })
+          }
+          onAdvance={advance}
+        />
       ) : null}
 
       {phase === "phase2_groups" ? (
@@ -233,9 +248,13 @@ export function AdminPage({
 
 function Phase1View({
   students,
+  aggregationAlgorithm,
+  onSetAlgorithm,
   onAdvance
 }: {
   students: StudentPublicSession[];
+  aggregationAlgorithm: AggregationAlgorithm;
+  onSetAlgorithm(algorithm: AggregationAlgorithm): void;
   onAdvance(): void;
 }) {
   const onlineStudents = students.filter((student) => student.online);
@@ -253,6 +272,25 @@ function Phase1View({
           <div className="phase1-hotspot-row">
             <span className="phase1-hotspot-key">MDP</span>
             <span className="phase1-hotspot-pass">{HOTSPOT_PASSWORD}</span>
+          </div>
+        </div>
+        <div className="phase1-algo">
+          <span className="phase1-algo-label">Algorithme phase 4</span>
+          <div className="phase1-algo-options">
+            {ALGORITHM_OPTIONS.map((option) => {
+              const active = option.id === aggregationAlgorithm;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`phase1-algo-option${active ? " is-active" : ""}`}
+                  onClick={() => onSetAlgorithm(option.id)}
+                >
+                  <span className="phase1-algo-option-label">{option.label}</span>
+                  <span className="phase1-algo-option-hint">{option.hint}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
