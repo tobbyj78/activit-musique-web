@@ -205,7 +205,7 @@ export function StudentPage({
             part={part}
             startAtServerMs={state.performanceStartAtServerMs}
             serverTimeOffsetMs={serverTimeOffsetMs}
-            leadTimeMs={3000}
+            leadTimeMs={2000}
           />
         ) : (
           <WaitingRoom title="Préparation…" />
