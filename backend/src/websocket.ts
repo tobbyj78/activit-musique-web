@@ -40,8 +40,9 @@ const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
 const DIRECT_PLAY_DURATION_MS = 700;
 const DIRECT_PLAY_VELOCITY = 1.0;
-const FEEDBACK_PLAY_DURATION_MS = 300;
-const FEEDBACK_PLAY_VELOCITY = 0.25;
+const WRONG_NOTE_TOLERANCE_MS = 100;
+const WRONG_NOTE_DURATION_MS = 400;
+const WRONG_NOTE_VELOCITY = 0.3;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
 
@@ -654,8 +655,11 @@ function handleInputDown(
     return;
   }
 
-  if (state.phase === "phase4_performance" && !state.mutedGroups.has(part.id)) {
-    const isDirect = state.aggregationAlgorithm === "direct";
+  if (
+    state.phase === "phase4_performance" &&
+    state.aggregationAlgorithm === "direct" &&
+    !state.mutedGroups.has(part.id)
+  ) {
     broadcastToAdmins(state, {
       type: "group_play_note",
       partId: part.id,
@@ -663,8 +667,32 @@ function handleInputDown(
       eventId: message.eventId,
       midi: message.midi,
       presetKey: part.soundPresetKey,
-      durationMs: isDirect ? DIRECT_PLAY_DURATION_MS : FEEDBACK_PLAY_DURATION_MS,
-      velocity: isDirect ? DIRECT_PLAY_VELOCITY : FEEDBACK_PLAY_VELOCITY,
+      durationMs: DIRECT_PLAY_DURATION_MS,
+      velocity: DIRECT_PLAY_VELOCITY,
+      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+      source: "live"
+    });
+  } else if (
+    state.phase === "phase4_performance" &&
+    state.aggregationAlgorithm !== "direct" &&
+    !state.mutedGroups.has(part.id) &&
+    !hasMatchingExpectedNote(
+      part.notes,
+      message.midi,
+      message.estimatedServerEventAtMs,
+      state.performanceStartAtServerMs,
+      WRONG_NOTE_TOLERANCE_MS
+    )
+  ) {
+    broadcastToAdmins(state, {
+      type: "group_play_note",
+      partId: part.id,
+      noteId: `live:${message.eventId}`,
+      eventId: message.eventId,
+      midi: message.midi,
+      presetKey: part.soundPresetKey,
+      durationMs: WRONG_NOTE_DURATION_MS,
+      velocity: WRONG_NOTE_VELOCITY,
       playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
       source: "live"
     });
@@ -784,6 +812,23 @@ function findExpectedNote(
   }
 
   return nearestNote(unusedNotes, undefined, eventAtServerMs, startAtServerMs);
+}
+
+function hasMatchingExpectedNote(
+  notes: ScheduledNote[],
+  midi: number,
+  eventAtServerMs: number,
+  startAtServerMs: number,
+  toleranceMs: number
+): boolean {
+  for (const note of notes) {
+    if (note.midi !== midi) continue;
+    const expectedAt = startAtServerMs + note.timestampMs;
+    if (Math.abs(eventAtServerMs - expectedAt) <= toleranceMs) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function nearestNote(

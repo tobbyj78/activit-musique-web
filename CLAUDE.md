@@ -23,14 +23,12 @@ Guidance pour Claude Code travaillant sur ce repo.
 - `note.velocity` plafonnée à 0.95 (`baseVelocity = Math.min(0.95, note.velocity)`).
 
 **Algos actuels phase 4** (state.aggregationAlgorithm) :
-| ID | Comportement (timer agrégé) |
+| ID | Comportement |
 |---|---|
 | `democratic` (défaut) | `count ≥ 1` → vélocité partition. Sinon silence. |
 | `majority` | `count ≥ ceil(groupSize/2)` → vélocité partition. Sinon silence. |
 | `doublure` | Joue **toujours** : `velocity = min(baseVelocity, 0.4 + 0.15 × count)`. ⚠️ Quasi-imperceptible si élèves jouent ou pas (count=0 → 80% du volume plein). C'est par design "ordinateur joue, élèves renforcent". |
 | `direct` | **Pas de timer**. Chaque `input_down` d'élève → `group_play_note` immédiat à vélocité 1.0, durée 700ms. Mode solo (1 joueur/groupe). |
-
-**Feedback live phase 4** (`handleInputDown`) : pour `democratic`/`majority`/`doublure`, chaque pression d'élève (juste ou fausse) déclenche aussi un `group_play_note` discret (`FEEDBACK_PLAY_DURATION_MS = 300`, `FEEDBACK_PLAY_VELOCITY = 0.25`) en plus de l'algo agrégé. Sans ça, presser une mauvaise note = silence total → l'élève a l'impression que son téléphone est cassé. `direct` garde son broadcast à vol 1.0 / 700ms (pas besoin de feedback en plus).
 
 **Phase 8 actuelle** : utilise `mode: "always"` (paramètre de `scheduleAggregatedPlayback`) — toutes les notes d'`orchestre.json` sont broadcastées avec leur vélocité pleine, indépendamment des inputs. Les inputs élèves sont quand même jugés par `judgeNote()` pour l'affichage des scores.
 
