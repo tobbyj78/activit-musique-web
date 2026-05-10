@@ -243,11 +243,17 @@ function Phase1View({
   return (
     <section className="phase phase-1">
       <div className="phase1-qr">
-        <QrCode value={QR_TARGET_URL} size={220} />
+        <QrCode value={QR_TARGET_URL} size={440} />
         <div className="phase1-hotspot">
           <span className="phase1-hotspot-label">Wifi</span>
-          <span className="phase1-hotspot-name">{HOTSPOT_NAME}</span>
-          <span className="phase1-hotspot-pass">{HOTSPOT_PASSWORD}</span>
+          <div className="phase1-hotspot-row">
+            <span className="phase1-hotspot-key">ID</span>
+            <span className="phase1-hotspot-name">{HOTSPOT_NAME}</span>
+          </div>
+          <div className="phase1-hotspot-row">
+            <span className="phase1-hotspot-key">MDP</span>
+            <span className="phase1-hotspot-pass">{HOTSPOT_PASSWORD}</span>
+          </div>
         </div>
       </div>
       <div className="phase1-cta">

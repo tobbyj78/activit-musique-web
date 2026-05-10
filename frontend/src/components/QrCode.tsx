@@ -16,7 +16,7 @@ export function QrCode({ value, size = 280 }: QrCodeProps) {
         level="M"
         marginSize={2}
       />
-      <p>{value}</p>
+      <div className="qr-url-badge">jaffrain.xyz</div>
     </div>
   );
 }
