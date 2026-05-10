@@ -29,7 +29,10 @@ body {
     );
   user-select: none;
   -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,
@@ -43,6 +46,8 @@ input,
 textarea {
   user-select: auto;
   -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
 }
 
 button {
