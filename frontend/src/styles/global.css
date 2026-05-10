@@ -368,6 +368,7 @@ ul {
 }
 
 .key:active,
+.key.is-active,
 .key.is-highlighted {
   transform: translateY(2px);
   box-shadow: 0 0 16px rgba(86, 215, 196, 0.7);

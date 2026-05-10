@@ -19,14 +19,88 @@ export function MiniKeyboard({
   onInputUp
 }: MiniKeyboardProps) {
   const activePointers = useRef(new Map<number, number>());
+  const pressedMidis = useRef(new Map<number, number>());
   const highlighted = new Set(highlightedMidis ?? []);
+
+  const setMidiPressed = (midi: number, pressed: boolean) => {
+    const count = pressedMidis.current.get(midi) || 0;
+    const newCount = pressed ? count + 1 : Math.max(0, count - 1);
+    
+    if (newCount === 0 && count > 0) {
+      pressedMidis.current.delete(midi);
+      document.querySelector(`.key[data-midi="${midi}"]`)?.classList.remove("is-active");
+      onInputUp?.(midi);
+    } else if (newCount === 1 && count === 0) {
+      pressedMidis.current.set(midi, 1);
+      document.querySelector(`.key[data-midi="${midi}"]`)?.classList.add("is-active");
+      onInputDown?.(midi);
+    } else if (newCount > 0) {
+      pressedMidis.current.set(midi, newCount);
+    }
+  };
+
+  const getMidiFromPoint = (clientX: number, clientY: number): number => {
+    const element = document.elementFromPoint(clientX, clientY);
+    if (!element) return -1;
+    const keyElement = element.closest(".key") as HTMLElement | null;
+    if (keyElement && keyElement.dataset.midi) {
+      return parseInt(keyElement.dataset.midi, 10);
+    }
+    return -1;
+  };
+
+  const handlePointerDown = (event: React.PointerEvent) => {
+    if (readOnly) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    
+    const midi = getMidiFromPoint(event.clientX, event.clientY);
+    activePointers.current.set(event.pointerId, midi);
+    if (midi >= 0) {
+      setMidiPressed(midi, true);
+    }
+  };
+
+  const handlePointerMove = (event: React.PointerEvent) => {
+    if (readOnly) return;
+    if (!activePointers.current.has(event.pointerId)) return;
+    
+    const midi = getMidiFromPoint(event.clientX, event.clientY);
+    const prevMidi = activePointers.current.get(event.pointerId)!;
+    
+    if (prevMidi !== midi) {
+      if (prevMidi >= 0) {
+        setMidiPressed(prevMidi, false);
+      }
+      if (midi >= 0) {
+        setMidiPressed(midi, true);
+      }
+      activePointers.current.set(event.pointerId, midi);
+    }
+  };
+
+  const handlePointerUpOrCancel = (event: React.PointerEvent) => {
+    if (readOnly) return;
+    const midi = activePointers.current.get(event.pointerId);
+    if (midi !== undefined) {
+      if (midi >= 0) {
+        setMidiPressed(midi, false);
+      }
+      activePointers.current.delete(event.pointerId);
+    }
+  };
 
   return (
     <section
       className={`keyboard-shell${readOnly ? " is-readonly" : ""}`}
       data-preset={presetKey}
     >
-      <div className="keyboard">
+      <div 
+        className="keyboard"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUpOrCancel}
+        onPointerCancel={handlePointerUpOrCancel}
+      >
         {lanes.map((lane) => {
           const isHighlighted = highlighted.has(lane.midi);
           const className = [
@@ -37,40 +111,12 @@ export function MiniKeyboard({
             .filter(Boolean)
             .join(" ");
 
-          if (readOnly) {
-            return (
-              <div key={lane.midi} className={className}>
-              </div>
-            );
-          }
-
           return (
-            <button
+            <div
               key={lane.midi}
               className={className}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                activePointers.current.set(event.pointerId, lane.midi);
-                onInputDown?.(lane.midi);
-              }}
-              onPointerUp={(event) => {
-                event.preventDefault();
-                const midi = activePointers.current.get(event.pointerId);
-                if (midi !== undefined) {
-                  activePointers.current.delete(event.pointerId);
-                  onInputUp?.(midi);
-                }
-              }}
-              onPointerCancel={(event) => {
-                const midi = activePointers.current.get(event.pointerId);
-                if (midi !== undefined) {
-                  activePointers.current.delete(event.pointerId);
-                  onInputUp?.(midi);
-                }
-              }}
-            >
-            </button>
+              data-midi={lane.midi}
+            ></div>
           );
         })}
       </div>
