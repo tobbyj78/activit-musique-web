@@ -44,7 +44,10 @@ const ALGORITHM_OPTIONS: { id: AggregationAlgorithm; label: string; hint: string
   { id: "democratic", label: "Démocratique", hint: "≥1 joueur joue → la note sonne" },
   { id: "majority", label: "Majorité", hint: "≥moitié du groupe → la note sonne" },
   { id: "doublure", label: "Doublure", hint: "Mélodie auto, +volume par joueur" },
-  { id: "direct", label: "Direct (solo)", hint: "Chaque pression joue à fond" }
+  { id: "direct", label: "Direct (solo)", hint: "Chaque pression joue à fond" },
+  { id: "quorum", label: "Quorum", hint: "≥3 joueurs d'accord sur la même note" },
+  { id: "cohesion", label: "Cohésion", hint: "Volume basé sur la densité et l'accord du groupe" },
+  { id: "burst", label: "Battement", hint: "Rafale synchronisée d'au moins 3 joueurs" }
 ];
 
 export function AdminPage({

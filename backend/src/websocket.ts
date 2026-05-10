@@ -40,9 +40,6 @@ const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
 const DIRECT_PLAY_DURATION_MS = 700;
 const DIRECT_PLAY_VELOCITY = 1.0;
-const WRONG_NOTE_TOLERANCE_MS = 100;
-const WRONG_NOTE_DURATION_MS = 400;
-const WRONG_NOTE_VELOCITY = 0.3;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
 
@@ -51,6 +48,16 @@ type PerformanceMode = "voted" | "always";
 type HonoLike = {
   get(path: string, ...handlers: any[]): unknown;
 };
+
+type BlindRecentInput = { studentId: string; midi: number; timeMs: number };
+const recentBlindInputs = new Map<string, BlindRecentInput[]>();
+
+type BlindPlayingNote = {
+  eventId: string;
+  midi: number;
+  activeStudents: Set<string>;
+};
+const playingBlindNotes = new Map<string, Map<number, BlindPlayingNote>>();
 
 let stateBroadcastTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -655,47 +662,31 @@ function handleInputDown(
     return;
   }
 
+  const isBlindAlgo = 
+    state.aggregationAlgorithm === "quorum" || 
+    state.aggregationAlgorithm === "cohesion" || 
+    state.aggregationAlgorithm === "burst";
+
   if (
     state.phase === "phase4_performance" &&
-    state.aggregationAlgorithm === "direct" &&
     !state.mutedGroups.has(part.id)
   ) {
-    broadcastToAdmins(state, {
-      type: "group_play_note",
-      partId: part.id,
-      noteId: `live:${message.eventId}`,
-      eventId: message.eventId,
-      midi: message.midi,
-      presetKey: part.soundPresetKey,
-      durationMs: DIRECT_PLAY_DURATION_MS,
-      velocity: DIRECT_PLAY_VELOCITY,
-      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
-      source: "live"
-    });
-  } else if (
-    state.phase === "phase4_performance" &&
-    state.aggregationAlgorithm !== "direct" &&
-    !state.mutedGroups.has(part.id) &&
-    !hasMatchingExpectedNote(
-      part.notes,
-      message.midi,
-      message.estimatedServerEventAtMs,
-      state.performanceStartAtServerMs,
-      WRONG_NOTE_TOLERANCE_MS
-    )
-  ) {
-    broadcastToAdmins(state, {
-      type: "group_play_note",
-      partId: part.id,
-      noteId: `live:${message.eventId}`,
-      eventId: message.eventId,
-      midi: message.midi,
-      presetKey: part.soundPresetKey,
-      durationMs: WRONG_NOTE_DURATION_MS,
-      velocity: WRONG_NOTE_VELOCITY,
-      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
-      source: "live"
-    });
+    if (state.aggregationAlgorithm === "direct") {
+      broadcastToAdmins(state, {
+        type: "group_play_note",
+        partId: part.id,
+        noteId: `live:${message.eventId}`,
+        eventId: message.eventId,
+        midi: message.midi,
+        presetKey: part.soundPresetKey,
+        durationMs: DIRECT_PLAY_DURATION_MS,
+        velocity: DIRECT_PLAY_VELOCITY,
+        playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+        source: "live"
+      });
+    } else if (isBlindAlgo) {
+      processBlindAlgorithmsDown(state, part, student, message);
+    }
   }
 
   const event: InputEventRecord = {
@@ -771,6 +762,8 @@ function handleInputUp(
     state.aggregationAlgorithm === "direct"
   ) {
     broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
+  } else if (state.phase === "phase4_performance") {
+    processBlindAlgorithmsUp(state, part, student, message);
   }
 
   event.serverUpAtMs = message.estimatedServerEventAtMs;
@@ -814,22 +807,6 @@ function findExpectedNote(
   return nearestNote(unusedNotes, undefined, eventAtServerMs, startAtServerMs);
 }
 
-function hasMatchingExpectedNote(
-  notes: ScheduledNote[],
-  midi: number,
-  eventAtServerMs: number,
-  startAtServerMs: number,
-  toleranceMs: number
-): boolean {
-  for (const note of notes) {
-    if (note.midi !== midi) continue;
-    const expectedAt = startAtServerMs + note.timestampMs;
-    if (Math.abs(eventAtServerMs - expectedAt) <= toleranceMs) {
-      return true;
-    }
-  }
-  return false;
-}
 
 function nearestNote(
   notes: ScheduledNote[],
@@ -986,5 +963,123 @@ function sendSerialized(ws: { send(data: string): void }, payload: string): void
     ws.send(payload);
   } catch {
     // The close handler will clean up dead connections.
+  }
+}
+
+function processBlindAlgorithmsDown(
+  state: RuntimeState,
+  part: { id: string; soundPresetKey: string },
+  student: StudentSession,
+  message: Extract<ClientMessage, { type: "input_down" }>
+) {
+  const now = Date.now();
+  let inputs = recentBlindInputs.get(part.id);
+  if (!inputs) {
+    inputs = [];
+    recentBlindInputs.set(part.id, inputs);
+  }
+  
+  inputs.push({ studentId: student.studentId, midi: message.midi, timeMs: now });
+  
+  // Clean old inputs (keep last 200ms)
+  const windowMs = 200;
+  inputs = inputs.filter(i => now - i.timeMs <= windowMs);
+  recentBlindInputs.set(part.id, inputs);
+
+  let partNotes = playingBlindNotes.get(part.id);
+  if (!partNotes) {
+    partNotes = new Map();
+    playingBlindNotes.set(part.id, partNotes);
+  }
+
+  // If already playing this exact MIDI note, add the student and do nothing else
+  if (partNotes.has(message.midi)) {
+    partNotes.get(message.midi)!.activeStudents.add(student.studentId);
+    return;
+  }
+
+  const algo = state.aggregationAlgorithm;
+  let shouldPlay = false;
+  let velocity = 0.8;
+  let playingMidi = message.midi;
+  let activeStudents = new Set<string>();
+
+  if (algo === "quorum") {
+    const recentSameMidi = inputs.filter(i => i.midi === message.midi && now - i.timeMs <= 120);
+    const uniqueStudents = new Set(recentSameMidi.map(i => i.studentId));
+    if (uniqueStudents.size >= 3) {
+      shouldPlay = true;
+      velocity = 0.8;
+      activeStudents = uniqueStudents;
+    }
+  } else if (algo === "cohesion") {
+    const recentSameMidi = inputs.filter(i => i.midi === message.midi && now - i.timeMs <= 150);
+    const uniqueStudents = new Set(recentSameMidi.map(i => i.studentId));
+    if (uniqueStudents.size >= 2) {
+      shouldPlay = true;
+      velocity = Math.min(1.0, 0.2 + uniqueStudents.size * 0.15);
+      activeStudents = uniqueStudents;
+    }
+  } else if (algo === "burst") {
+    const recentRafale = inputs.filter(i => now - i.timeMs <= 80);
+    const uniqueStudentsRafale = new Set(recentRafale.map(i => i.studentId));
+    if (uniqueStudentsRafale.size >= 3) {
+      const counts = new Map<number, Set<string>>();
+      for (const i of recentRafale) {
+        if (!counts.has(i.midi)) counts.set(i.midi, new Set());
+        counts.get(i.midi)!.add(i.studentId);
+      }
+      let maxCount = 0;
+      for (const [m, s] of counts.entries()) {
+        if (s.size > maxCount) {
+          maxCount = s.size;
+          playingMidi = m;
+        }
+      }
+      
+      if (!partNotes.has(playingMidi)) {
+        shouldPlay = true;
+        velocity = 0.9;
+        activeStudents = counts.get(playingMidi)!;
+      }
+    }
+  }
+
+  if (shouldPlay) {
+    const eventId = `blind:${part.id}:${playingMidi}:${now}`;
+    partNotes.set(playingMidi, { eventId, midi: playingMidi, activeStudents });
+    
+    broadcastToAdmins(state, {
+      type: "group_play_note",
+      partId: part.id,
+      noteId: eventId,
+      eventId: eventId,
+      midi: playingMidi,
+      presetKey: part.soundPresetKey,
+      durationMs: LIVE_PLAY_DURATION_MS,
+      velocity,
+      playAtServerMs: now + LIVE_PLAY_DELAY_MS,
+      source: "live"
+    });
+  }
+}
+
+function processBlindAlgorithmsUp(
+  state: RuntimeState,
+  part: { id: string },
+  student: StudentSession,
+  message: Extract<ClientMessage, { type: "input_up" }>
+) {
+  const partNotes = playingBlindNotes.get(part.id);
+  if (!partNotes) return;
+
+  for (const [midi, noteInfo] of partNotes.entries()) {
+    if (noteInfo.activeStudents.has(student.studentId)) {
+      noteInfo.activeStudents.delete(student.studentId);
+      if (noteInfo.activeStudents.size === 0) {
+        broadcastToAdmins(state, { type: "group_stop_note", eventId: noteInfo.eventId });
+        partNotes.delete(midi);
+      }
+    }
   }
 }

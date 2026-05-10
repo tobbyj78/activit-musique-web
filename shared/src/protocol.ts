@@ -28,7 +28,10 @@ export const aggregationAlgorithmSchema = z.enum([
   "democratic",
   "majority",
   "doublure",
-  "direct"
+  "direct",
+  "quorum",
+  "cohesion",
+  "burst"
 ]);
 
 export type AppPhase = z.infer<typeof appPhaseSchema>;
