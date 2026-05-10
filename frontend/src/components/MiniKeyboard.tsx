@@ -60,24 +60,6 @@ export function MiniKeyboard({
     }
   };
 
-  const handlePointerMove = (event: React.PointerEvent) => {
-    if (readOnly) return;
-    if (!activePointers.current.has(event.pointerId)) return;
-    
-    const midi = getMidiFromPoint(event.clientX, event.clientY);
-    const prevMidi = activePointers.current.get(event.pointerId)!;
-    
-    if (prevMidi !== midi) {
-      if (prevMidi >= 0) {
-        setMidiPressed(prevMidi, false);
-      }
-      if (midi >= 0) {
-        setMidiPressed(midi, true);
-      }
-      activePointers.current.set(event.pointerId, midi);
-    }
-  };
-
   const handlePointerUpOrCancel = (event: React.PointerEvent) => {
     if (readOnly) return;
     const midi = activePointers.current.get(event.pointerId);
@@ -97,7 +79,6 @@ export function MiniKeyboard({
       <div 
         className="keyboard"
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUpOrCancel}
         onPointerCancel={handlePointerUpOrCancel}
       >
