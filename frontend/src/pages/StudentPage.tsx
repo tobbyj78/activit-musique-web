@@ -102,9 +102,6 @@ export function StudentPage({
   if (phase === "phase1_lobby") {
     return (
       <main className="student-shell">
-        <header className="student-header-phone">
-          <h1>{student.name}</h1>
-        </header>
         <WaitingRoom
           title="En attente de l'administrateur"
           subtitle="La session va commencer."
@@ -116,9 +113,6 @@ export function StudentPage({
   if (phase === "phase5_survey" || phase === "phase9_orchestra_survey") {
     return (
       <main className="student-shell">
-        <header className="student-header-phone">
-          <h1>{student.name}</h1>
-        </header>
         <Survey
           onSubmit={(questionId, answerId) =>
             send({ type: "student_submit_answer", questionId, answerId })
@@ -144,13 +138,9 @@ export function StudentPage({
     if (!part || studentScoreId !== targetScoreId) {
       return (
         <main className="student-shell">
-          <header className="student-header-phone">
-            <h1>{student.name}</h1>
-          </header>
           <GroupPicker
             parts={targetScore?.parts ?? []}
             rooms={state.parts.filter((room) => room.scoreId === targetScoreId)}
-            students={state.students}
             selectedPartId={undefined}
             onJoin={(partId) => send({ type: "join_part", partId })}
           />
@@ -159,14 +149,17 @@ export function StudentPage({
     }
     return (
       <main className="student-shell">
-        <header className="student-header-phone">
-          <p className="eyebrow">{part.displayName}</p>
-          <h1>{student.name}</h1>
-        </header>
-        <WaitingRoom
-          title={`Tu es dans ${part.displayName}`}
-          subtitle="En attente des autres élèves."
-        />
+        <section className="waiting-room">
+          <h2>Tu es dans {part.displayName}</h2>
+          <p>En attente des autres élèves.</p>
+          <button
+            type="button"
+            className="leave-part-button"
+            onClick={() => send({ type: "leave_part" })}
+          >
+            Partir du groupe
+          </button>
+        </section>
       </main>
     );
   }
@@ -174,9 +167,6 @@ export function StudentPage({
   if (!part || studentScoreId !== targetScoreId) {
     return (
       <main className="student-shell">
-        <header className="student-header-phone">
-          <h1>{student.name}</h1>
-        </header>
         <WaitingRoom
           title="Pas de groupe"
           subtitle="Tu n'as pas de groupe pour cette partie."
@@ -190,7 +180,6 @@ export function StudentPage({
       <main className="student-shell student-keyboard-only">
         <header className="student-header-phone">
           <p className="eyebrow">{part.displayName}</p>
-          <h1>{student.name}</h1>
         </header>
         <div className="practice-zone">
           <p className="practice-hint">Joue librement</p>
@@ -210,7 +199,6 @@ export function StudentPage({
       <main className="student-shell performance-layout">
         <header className="student-header-phone compact">
           <p className="eyebrow">{part.displayName}</p>
-          <span>{student.name}</span>
         </header>
         {state.performanceStartAtServerMs ? (
           <NoteHighway

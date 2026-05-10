@@ -1,13 +1,11 @@
 import type {
   PartPublicRoom,
-  ScorePart,
-  StudentPublicSession
+  ScorePart
 } from "@classe-orchestre/shared";
 
 type GroupPickerProps = {
   parts: ScorePart[];
   rooms: PartPublicRoom[];
-  students: StudentPublicSession[];
   selectedPartId?: string;
   onJoin(partId: string): void;
 };
@@ -15,7 +13,6 @@ type GroupPickerProps = {
 export function GroupPicker({
   parts,
   rooms,
-  students,
   selectedPartId,
   onJoin
 }: GroupPickerProps) {
@@ -28,9 +25,6 @@ export function GroupPicker({
           const count = room?.students.length ?? 0;
           const max = room?.maxSize ?? 8;
           const full = count >= max;
-          const studentNames = students
-            .filter((student) => room?.students.includes(student.id))
-            .map((student) => student.name);
 
           return (
             <button
@@ -45,7 +39,6 @@ export function GroupPicker({
               <span className="group-count">
                 {count}/{max}
               </span>
-              <small>{studentNames.join(", ") || "Disponible"}</small>
             </button>
           );
         })}
