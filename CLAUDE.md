@@ -75,7 +75,7 @@ Le serveur utilise `mode: "always"` dans `scheduleAggregatedPlayback` : toutes l
 ## Partitions
 
 Deux fichiers dans `partitions/` :
-- `piano_only.json` — 4 groupes, 285 notes, 65.5s
+- `piano_only.json` — 4 groupes, 145 notes, 30s
 - `orchestre.json` — 12 instruments (Flute, Hautbois, Clarinette, Basson, Cor, Trompette, Trombone, Tuba, ViolonI, ViolonII, Alto, Violoncelle)
 
 Lus au démarrage par `backend/src/partitions/loadPartitions.ts` puis normalisés via `normalizeScore.ts` en `NormalizedScore`. Le type `ScoreId = "piano_only" | "orchestre"`.
