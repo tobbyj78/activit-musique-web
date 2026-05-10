@@ -8,7 +8,7 @@ type NoteHighwayProps = {
   leadTimeMs: number;
 };
 
-const HIT_LINE_PERCENT = 70;
+const HIT_LINE_PERCENT = 55;
 
 export function NoteHighway({
   part,
