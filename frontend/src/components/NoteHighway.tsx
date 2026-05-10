@@ -69,8 +69,8 @@ export function NoteHighway({
             22,
             Math.max(3.5, (note.durationMs / leadTimeMs) * HIT_LINE_PERCENT)
           );
-          const noteCenterY = progress * HIT_LINE_PERCENT;
-          const y = Math.min(104, Math.max(-height, noteCenterY - height / 2));
+          const bottomY = progress * HIT_LINE_PERCENT;
+          const y = Math.min(104, Math.max(-height, bottomY - height));
 
           return (
             <div

@@ -443,9 +443,10 @@ ul {
   left: 0;
   right: 0;
   top: 84%;
-  height: 4px;
-  background: #eebc5b;
-  box-shadow: 0 0 18px rgba(238, 188, 91, 0.7);
+  height: 2px;
+  background: rgba(238, 188, 91, 0.75);
+  box-shadow: 0 0 10px rgba(238, 188, 91, 0.6);
+  z-index: 10;
 }
 
 /* survey */
