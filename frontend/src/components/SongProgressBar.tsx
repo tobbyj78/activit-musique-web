@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 type SongProgressBarProps = {
   startAtServerMs: number;
@@ -11,33 +11,51 @@ export function SongProgressBar({
   durationMs,
   serverTimeOffsetMs
 }: SongProgressBarProps) {
-  const [now, setNow] = useState(Date.now());
+  const fillRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
+    if (!startAtServerMs || !durationMs) return;
+
     let frame = 0;
+
     const tick = () => {
-      setNow(Date.now());
-      frame = window.requestAnimationFrame(tick);
+      const now = Date.now();
+      const serverNow = now + serverTimeOffsetMs;
+      const elapsed = Math.max(0, serverNow - startAtServerMs);
+      
+      const cappedElapsed = Math.min(elapsed, durationMs);
+      const ratio = durationMs > 0 ? cappedElapsed / durationMs : 0;
+
+      const elapsedSeconds = Math.floor(cappedElapsed / 1000);
+      const totalSeconds = Math.floor(durationMs / 1000);
+
+      if (fillRef.current) {
+        fillRef.current.style.width = `${(ratio * 100).toFixed(2)}%`;
+      }
+      
+      if (labelRef.current) {
+        labelRef.current.textContent = `${formatMmSs(elapsedSeconds)} / ${formatMmSs(totalSeconds)}`;
+      }
+
+      if (cappedElapsed < durationMs) {
+        frame = window.requestAnimationFrame(tick);
+      } else if (fillRef.current && labelRef.current) {
+        fillRef.current.style.width = '100%';
+        labelRef.current.textContent = `${formatMmSs(totalSeconds)} / ${formatMmSs(totalSeconds)}`;
+      }
     };
+
     frame = window.requestAnimationFrame(tick);
+    
     return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  const serverNow = now + serverTimeOffsetMs;
-  const elapsed = Math.max(0, serverNow - startAtServerMs);
-  const ratio = durationMs > 0 ? Math.min(1, elapsed / durationMs) : 0;
-
-  const elapsedSeconds = Math.floor(elapsed / 1000);
-  const totalSeconds = Math.floor(durationMs / 1000);
+  }, [startAtServerMs, durationMs, serverTimeOffsetMs]);
 
   return (
-    <div className="song-progress" role="progressbar" aria-valuenow={ratio * 100}>
-      <div
-        className="song-progress-fill"
-        style={{ width: `${(ratio * 100).toFixed(2)}%` }}
-      />
-      <span className="song-progress-label">
-        {formatMmSs(elapsedSeconds)} / {formatMmSs(totalSeconds)}
+    <div className="song-progress" role="progressbar">
+      <div className="song-progress-fill" ref={fillRef} style={{ width: '0%' }} />
+      <span className="song-progress-label" ref={labelRef}>
+        0:00 / {formatMmSs(Math.floor((durationMs || 0) / 1000))}
       </span>
     </div>
   );
