@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import type { PianoLane } from "@classe-orchestre/shared";
 
 type MiniKeyboardProps = {
@@ -21,6 +21,24 @@ export function MiniKeyboard({
   const activePointers = useRef(new Map<number, number>());
   const pressedMidis = useRef(new Map<number, number>());
   const highlighted = new Set(highlightedMidis ?? []);
+  const shellRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    
+    // Completely blocks iOS loupe, text selection, and native scrolling
+    // specifically within the interactive keyboard area.
+    const preventNativeTouch = (e: Event) => e.preventDefault();
+    
+    el.addEventListener("touchstart", preventNativeTouch, { passive: false });
+    el.addEventListener("contextmenu", preventNativeTouch, { passive: false });
+    
+    return () => {
+      el.removeEventListener("touchstart", preventNativeTouch);
+      el.removeEventListener("contextmenu", preventNativeTouch);
+    };
+  }, []);
 
   const setMidiPressed = (midi: number, pressed: boolean) => {
     const count = pressedMidis.current.get(midi) || 0;
@@ -73,6 +91,7 @@ export function MiniKeyboard({
 
   return (
     <section
+      ref={shellRef}
       className={`keyboard-shell${readOnly ? " is-readonly" : ""}`}
       data-preset={presetKey}
     >

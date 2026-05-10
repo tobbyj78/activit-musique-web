@@ -16,7 +16,8 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   overscroll-behavior: none;
   background:
     linear-gradient(180deg, rgba(17, 16, 15, 0.96), rgba(20, 18, 17, 0.98)),
@@ -170,11 +171,12 @@ ul {
 /* ========== STUDENT (phone) ========== */
 
 .student-shell {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  gap: 12px;
+  padding: 3%;
+  gap: 2%;
+  overflow: hidden;
 }
 
 .student-shell.student-keyboard-only {
@@ -262,27 +264,34 @@ ul {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 2%;
+  min-height: 0;
 }
 
 .group-picker h2 {
   text-align: center;
-  margin: 0 0 4px;
+  margin: 0;
   color: #eebc5b;
   font-size: 1.4rem;
 }
 
 .group-grid {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 3%;
+  height: 100%;
+  min-height: 0;
 }
 
 .group-card {
-  min-height: 130px;
-  padding: 12px;
-  display: grid;
-  gap: 6px;
+  height: 100%;
+  padding: 6%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4%;
   text-align: left;
   border: 1px solid rgba(247, 241, 223, 0.18);
   border-radius: 10px;
@@ -343,13 +352,13 @@ ul {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 4px;
-  padding: 8px 0 6px;
+  gap: 1%;
+  padding: 2% 0;
   touch-action: none;
 }
 
 .key {
-  height: clamp(80px, 22vh, 180px);
+  height: 22vh;
   border: 1px solid rgba(247, 241, 223, 0.22);
   border-radius: 8px;
   color: #11100f;
@@ -460,8 +469,9 @@ ul {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 16px 4px;
+  gap: 4%;
+  padding: 4% 1%;
+  min-height: 0;
 }
 
 .survey.done {
@@ -487,13 +497,19 @@ ul {
 }
 
 .survey-answers {
+  flex: 1;
   display: grid;
-  gap: 10px;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 3%;
+  height: 100%;
+  min-height: 0;
 }
 
 .survey-answer {
-  min-height: 60px;
-  padding: 12px 16px;
+  height: 100%;
+  padding: 4% 6%;
+  display: flex;
+  align-items: center;
   border-radius: 10px;
   background: #1b1917;
   border: 1px solid rgba(238, 188, 91, 0.4);
