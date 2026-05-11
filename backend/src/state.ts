@@ -4,6 +4,7 @@ import type {
   GroupScore,
   NormalizedScore,
   NoteJudgement,
+  OrchestraAlgorithm,
   PartPublicRoom,
   PerformanceStatus,
   PublicRuntimeState,
@@ -78,6 +79,7 @@ export type RuntimeState = {
   surveyAnswers: Map<string, Map<string, string>>;
 
   aggregationAlgorithm: AggregationAlgorithm;
+  orchestraAlgorithm: OrchestraAlgorithm;
   wrongNoteVelocity: number;
 
   performanceTimers: ReturnType<typeof setTimeout>[];
@@ -117,6 +119,7 @@ export function createRuntimeState(
     activeKeysByStudent: new Map(),
     surveyAnswers: new Map(),
     aggregationAlgorithm: "democratic",
+    orchestraAlgorithm: "direct",
     wrongNoteVelocity: 0.3,
     performanceTimers: []
   };
@@ -173,6 +176,7 @@ export function publicRuntimeState(state: RuntimeState): PublicRuntimeState {
     groupScores: Array.from(state.groupScores.values()),
     globalScore: state.globalScore,
     aggregationAlgorithm: state.aggregationAlgorithm,
+    orchestraAlgorithm: state.orchestraAlgorithm,
     wrongNoteVelocity: state.wrongNoteVelocity
   };
 }

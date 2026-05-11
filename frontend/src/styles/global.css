@@ -774,6 +774,12 @@ ul {
   align-self: center;
 }
 
+.phase1-algo-divider {
+  height: 1px;
+  background: rgba(238, 188, 91, 0.2);
+  margin: 4px 0;
+}
+
 .phase1-algo-options {
   display: flex;
   flex-direction: column;

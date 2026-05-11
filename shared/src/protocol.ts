@@ -34,9 +34,12 @@ export const aggregationAlgorithmSchema = z.enum([
   "burst"
 ]);
 
+export const orchestraAlgorithmSchema = z.enum(["direct"]);
+
 export type AppPhase = z.infer<typeof appPhaseSchema>;
 export type PerformanceStatus = z.infer<typeof performanceStatusSchema>;
 export type AggregationAlgorithm = z.infer<typeof aggregationAlgorithmSchema>;
+export type OrchestraAlgorithm = z.infer<typeof orchestraAlgorithmSchema>;
 
 export type BaseMessage = {
   type: string;
@@ -112,6 +115,7 @@ export type PublicState = {
   groupScores: GroupScore[];
   globalScore: number;
   aggregationAlgorithm: AggregationAlgorithm;
+  orchestraAlgorithm: OrchestraAlgorithm;
   wrongNoteVelocity: number;
 };
 
@@ -184,6 +188,11 @@ export const clientMessageSchema = z.union([
     ...baseFields,
     type: z.literal("admin_set_aggregation_algorithm"),
     algorithm: aggregationAlgorithmSchema
+  }),
+  z.object({
+    ...baseFields,
+    type: z.literal("admin_set_orchestra_algorithm"),
+    algorithm: orchestraAlgorithmSchema
   }),
   z.object({
     ...baseFields,

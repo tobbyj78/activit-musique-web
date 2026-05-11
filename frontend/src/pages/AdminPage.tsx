@@ -4,6 +4,7 @@ import type {
   AggregationAlgorithm,
   ClientMessage,
   GroupScore,
+  OrchestraAlgorithm,
   PartPublicRoom,
   PublicState,
   ScorePart,
@@ -39,6 +40,10 @@ type AdminPageProps = {
 const QR_TARGET_URL = "https://jaffrain.xyz";
 const HOTSPOT_NAME = "Iphone de Tom";
 const HOTSPOT_PASSWORD = "244466666";
+
+const ORCHESTRA_ALGORITHM_OPTIONS: { id: OrchestraAlgorithm; label: string; hint: string }[] = [
+  { id: "direct", label: "Direct (solo)", hint: "Chaque pression joue avec la durée de la partition" }
+];
 
 const ALGORITHM_OPTIONS: { id: AggregationAlgorithm; label: string; hint: string }[] = [
   { id: "democratic", label: "Démocratique", hint: "≥1 joueur joue → la note sonne" },
@@ -142,9 +147,13 @@ export function AdminPage({
         <Phase1View
           students={state.students}
           aggregationAlgorithm={state.aggregationAlgorithm}
+          orchestraAlgorithm={state.orchestraAlgorithm}
           wrongNoteVelocity={state.wrongNoteVelocity}
           onSetAlgorithm={(algorithm) =>
             send({ type: "admin_set_aggregation_algorithm", algorithm })
+          }
+          onSetOrchestraAlgorithm={(algorithm) =>
+            send({ type: "admin_set_orchestra_algorithm", algorithm })
           }
           onSetWrongNoteVelocity={(velocity) =>
             send({ type: "admin_set_wrong_note_velocity", velocity })
@@ -259,15 +268,19 @@ const VOTED_ALGOS: AggregationAlgorithm[] = ["democratic", "majority", "doublure
 function Phase1View({
   students,
   aggregationAlgorithm,
+  orchestraAlgorithm,
   wrongNoteVelocity,
   onSetAlgorithm,
+  onSetOrchestraAlgorithm,
   onSetWrongNoteVelocity,
   onAdvance
 }: {
   students: StudentPublicSession[];
   aggregationAlgorithm: AggregationAlgorithm;
+  orchestraAlgorithm: OrchestraAlgorithm;
   wrongNoteVelocity: number;
   onSetAlgorithm(algorithm: AggregationAlgorithm): void;
+  onSetOrchestraAlgorithm(algorithm: OrchestraAlgorithm): void;
   onSetWrongNoteVelocity(velocity: number): void;
   onAdvance(): void;
 }) {
@@ -317,6 +330,24 @@ function Phase1View({
                   type="button"
                   className={`phase1-algo-option${active ? " is-active" : ""}`}
                   onClick={() => onSetAlgorithm(option.id)}
+                >
+                  <span className="phase1-algo-option-label">{option.label}</span>
+                  <span className="phase1-algo-option-hint">{option.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="phase1-algo-divider" />
+          <span className="phase1-algo-label">Algorithme phase 8</span>
+          <div className="phase1-algo-options">
+            {ORCHESTRA_ALGORITHM_OPTIONS.map((option) => {
+              const active = option.id === orchestraAlgorithm;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`phase1-algo-option${active ? " is-active" : ""}`}
+                  onClick={() => onSetOrchestraAlgorithm(option.id)}
                 >
                   <span className="phase1-algo-option-label">{option.label}</span>
                   <span className="phase1-algo-option-hint">{option.hint}</span>

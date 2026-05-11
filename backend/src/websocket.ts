@@ -46,7 +46,7 @@ const WRONG_NOTE_VELOCITY = 0.3;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
 
-type PerformanceMode = "voted" | "always";
+type PerformanceMode = "voted" | "always" | "orchestra_voted";
 
 type HonoLike = {
   get(path: string, ...handlers: any[]): unknown;
@@ -280,6 +280,15 @@ function handleMessage(
         broadcastState(state);
       });
       break;
+    case "admin_set_orchestra_algorithm":
+      withAdmin(state, connectionId, () => {
+        if (state.phase !== "phase1_lobby") {
+          return;
+        }
+        state.orchestraAlgorithm = message.algorithm;
+        broadcastState(state);
+      });
+      break;
     case "admin_set_wrong_note_velocity":
       withAdmin(state, connectionId, () => {
         if (state.phase !== "phase1_lobby") {
@@ -479,7 +488,7 @@ function advancePhase(state: RuntimeState): void {
     case "phase7_orchestra_practice":
       state.phase = "phase8_orchestra_performance";
       state.activeKeysByStudent.clear();
-      startPerformance(state, "orchestre", COUNTDOWN_MS, "always");
+      startPerformance(state, "orchestre", COUNTDOWN_MS, "orchestra_voted");
       break;
     case "phase8_orchestra_performance":
       clearPerformanceTimers(state);
@@ -555,6 +564,26 @@ function startPerformance(
   );
 }
 
+function getLocalNoteDuration(notes: ScheduledNote[], positionMs: number): number {
+  const WINDOW_MS = 600;
+  const FALLBACK_MS = 400;
+
+  const durations = notes
+    .filter((n) => n.durationMs > 0 && Math.abs(n.timestampMs - positionMs) <= WINDOW_MS)
+    .map((n) => n.durationMs)
+    .sort((a, b) => a - b);
+
+  if (durations.length === 0) return FALLBACK_MS;
+
+  const mid = Math.floor(durations.length / 2);
+  const median =
+    durations.length % 2 === 0
+      ? (durations[mid - 1] + durations[mid]) / 2
+      : durations[mid];
+
+  return Math.max(120, median);
+}
+
 function scheduleAggregatedPlayback(
   state: RuntimeState,
   scoreId: ScoreId,
@@ -562,6 +591,9 @@ function scheduleAggregatedPlayback(
   mode: PerformanceMode
 ): void {
   if (mode === "voted" && state.aggregationAlgorithm === "direct") {
+    return;
+  }
+  if (mode === "orchestra_voted" && state.orchestraAlgorithm === "direct") {
     return;
   }
 
@@ -724,6 +756,27 @@ function handleInputDown(
     }
   }
 
+  if (
+    state.phase === "phase8_orchestra_performance" &&
+    !state.mutedGroups.has(part.id) &&
+    state.orchestraAlgorithm === "direct"
+  ) {
+    const positionMs = message.estimatedServerEventAtMs - state.performanceStartAtServerMs;
+    const durationMs = getLocalNoteDuration(part.notes, positionMs);
+    broadcastToAdmins(state, {
+      type: "group_play_note",
+      partId: part.id,
+      noteId: `live:${message.eventId}`,
+      eventId: message.eventId,
+      midi: message.midi,
+      presetKey: part.soundPresetKey,
+      durationMs,
+      velocity: DIRECT_PLAY_VELOCITY,
+      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+      source: "live"
+    });
+  }
+
   const event: InputEventRecord = {
     eventId: message.eventId,
     studentId: student.studentId,
@@ -792,19 +845,19 @@ function handleInputUp(
     return;
   }
 
-  if (
-    state.phase === "phase4_performance" &&
-    state.aggregationAlgorithm === "direct"
-  ) {
-    broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
-  } else if (state.phase === "phase4_performance") {
-    processBlindAlgorithmsUp(state, part, student, message);
-  }
-
   event.serverUpAtMs = message.estimatedServerEventAtMs;
   const score = state.scores[state.currentScoreId];
   const part = score.parts.find((candidate) => candidate.id === event.partId);
   const expected = part?.notes.find((note) => note.id === event.matchedNoteId);
+
+  if (state.phase === "phase4_performance") {
+    if (state.aggregationAlgorithm === "direct") {
+      broadcastToAdmins(state, { type: "group_stop_note", eventId: message.eventId });
+    } else if (part) {
+      processBlindAlgorithmsUp(state, part, student, message);
+    }
+  }
+  // phase 8 direct: pas de stop_note, la durée de partition gère la fin de note
   if (!part || !expected) {
     return;
   }
