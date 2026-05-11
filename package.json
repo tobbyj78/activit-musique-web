@@ -9,6 +9,7 @@
     "dev": "bun run dev:backend & bun run dev:frontend",
     "build": "bun run --cwd frontend build",
     "check": "bun run --cwd shared check && bun run --cwd backend check && bun run --cwd frontend check",
-    "load:piano": "bun scripts/load-piano.ts"
+    "load:piano": "bun scripts/load-piano.ts",
+    "load:orchestra": "bun scripts/load-orchestra.ts"
   }
 }
