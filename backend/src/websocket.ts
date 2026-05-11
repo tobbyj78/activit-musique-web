@@ -19,6 +19,7 @@ import {
   publicRuntimeState,
   publicState,
   resetRuntimeState,
+  softResetToLobby,
   type RuntimeState,
   type InputEventRecord,
   type StudentSession
@@ -38,7 +39,6 @@ const OUTPUT_DELAY_MS = 220;
 const LIVE_PLAY_DELAY_MS = 30;
 const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
-const DIRECT_PLAY_DURATION_MS = 700;
 const DIRECT_PLAY_VELOCITY = 1.0;
 const WRONG_NOTE_TOLERANCE_MS = 100;
 const WRONG_NOTE_DURATION_MS = 400;
@@ -289,6 +289,15 @@ function handleMessage(
         broadcastState(state);
       });
       break;
+    case "admin_set_path_choice":
+      withAdmin(state, connectionId, () => {
+        if (state.phase !== "phase1_lobby") {
+          return;
+        }
+        state.pathChoice = message.path;
+        broadcastState(state);
+      });
+      break;
     case "admin_set_wrong_note_velocity":
       withAdmin(state, connectionId, () => {
         if (state.phase !== "phase1_lobby") {
@@ -432,19 +441,11 @@ function cleanupDisconnectedStudents(state: RuntimeState): void {
   }
 }
 
-function clearStudentGroupAssignments(state: RuntimeState): void {
-  for (const room of state.parts.values()) {
-    room.students = [];
-  }
-  for (const student of state.students.values()) {
-    student.partId = undefined;
-  }
-}
-
 function advancePhase(state: RuntimeState): void {
   switch (state.phase) {
     case "phase1_lobby":
-      state.phase = "phase2_groups";
+      state.phase =
+        state.pathChoice === "orchestra" ? "phase6_orchestra_groups" : "phase2_groups";
       broadcastState(state);
       break;
     case "phase2_groups":
@@ -465,19 +466,7 @@ function advancePhase(state: RuntimeState): void {
       broadcastState(state);
       break;
     case "phase5_survey":
-      // Move into the orchestra arc: regroup students and reset audio state.
-      clearPerformanceTimers(state);
-      clearStudentGroupAssignments(state);
-      state.activeKeysByStudent.clear();
-      state.mutedGroups.clear();
-      state.inputs.clear();
-      state.judgements.clear();
-      state.groupScores.clear();
-      state.globalScore = 0;
-      state.performanceStartAtServerMs = undefined;
-      state.currentScoreId = undefined;
-      state.performanceStatus = "idle";
-      state.phase = "phase6_orchestra_groups";
+      softResetToLobby(state);
       broadcastState(state);
       break;
     case "phase6_orchestra_groups":
@@ -498,7 +487,8 @@ function advancePhase(state: RuntimeState): void {
       broadcastState(state);
       break;
     case "phase9_orchestra_survey":
-      forceReset(state);
+      softResetToLobby(state);
+      broadcastState(state);
       break;
   }
 }
@@ -617,26 +607,23 @@ function scheduleAggregatedPlayback(
           }
 
           const baseVelocity = Math.min(0.95, note.velocity);
+          const algorithm =
+            mode === "voted" ? state.aggregationAlgorithm : state.orchestraAlgorithm;
+          const count = countCorrectPressers(state, part.id, note, expectedAtServerMs);
           let velocity: number;
 
-          if (mode === "voted") {
-            const algorithm = state.aggregationAlgorithm;
-            const count = countCorrectPressers(state, part.id, note, expectedAtServerMs);
-            if (algorithm === "democratic") {
-              if (count < 1) return;
-              velocity = baseVelocity;
-            } else if (algorithm === "majority") {
-              const groupSize = activeStudentsForPart(state, part.id).length;
-              const threshold = Math.ceil(Math.max(1, groupSize) / 2);
-              if (count < threshold) return;
-              velocity = baseVelocity;
-            } else if (algorithm === "doublure") {
-              velocity = Math.min(baseVelocity, 0.4 + 0.15 * count);
-            } else {
-              return;
-            }
-          } else {
+          if (algorithm === "democratic") {
+            if (count < 1) return;
             velocity = baseVelocity;
+          } else if (algorithm === "majority") {
+            const groupSize = activeStudentsForPart(state, part.id).length;
+            const threshold = Math.ceil(Math.max(1, groupSize) / 2);
+            if (count < threshold) return;
+            velocity = baseVelocity;
+          } else if (algorithm === "doublure") {
+            velocity = Math.min(baseVelocity, 0.4 + 0.15 * count);
+          } else {
+            return;
           }
 
           broadcastToAdmins(state, {
@@ -718,6 +705,7 @@ function handleInputDown(
     !state.mutedGroups.has(part.id)
   ) {
     if (state.aggregationAlgorithm === "direct") {
+      const positionMs = message.estimatedServerEventAtMs - state.performanceStartAtServerMs;
       broadcastToAdmins(state, {
         type: "group_play_note",
         partId: part.id,
@@ -725,7 +713,7 @@ function handleInputDown(
         eventId: message.eventId,
         midi: message.midi,
         presetKey: part.soundPresetKey,
-        durationMs: DIRECT_PLAY_DURATION_MS,
+        durationMs: getLocalNoteDuration(part.notes, positionMs),
         velocity: DIRECT_PLAY_VELOCITY,
         playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
         source: "live"
@@ -758,23 +746,45 @@ function handleInputDown(
 
   if (
     state.phase === "phase8_orchestra_performance" &&
-    !state.mutedGroups.has(part.id) &&
-    state.orchestraAlgorithm === "direct"
+    !state.mutedGroups.has(part.id)
   ) {
-    const positionMs = message.estimatedServerEventAtMs - state.performanceStartAtServerMs;
-    const durationMs = getLocalNoteDuration(part.notes, positionMs);
-    broadcastToAdmins(state, {
-      type: "group_play_note",
-      partId: part.id,
-      noteId: `live:${message.eventId}`,
-      eventId: message.eventId,
-      midi: message.midi,
-      presetKey: part.soundPresetKey,
-      durationMs,
-      velocity: DIRECT_PLAY_VELOCITY,
-      playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
-      source: "live"
-    });
+    if (state.orchestraAlgorithm === "direct") {
+      const positionMs = message.estimatedServerEventAtMs - state.performanceStartAtServerMs;
+      const durationMs = getLocalNoteDuration(part.notes, positionMs);
+      broadcastToAdmins(state, {
+        type: "group_play_note",
+        partId: part.id,
+        noteId: `live:${message.eventId}`,
+        eventId: message.eventId,
+        midi: message.midi,
+        presetKey: part.soundPresetKey,
+        durationMs,
+        velocity: DIRECT_PLAY_VELOCITY,
+        playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+        source: "live"
+      });
+    } else if (
+      !hasMatchingExpectedNote(
+        part.notes,
+        message.midi,
+        message.estimatedServerEventAtMs,
+        state.performanceStartAtServerMs,
+        WRONG_NOTE_TOLERANCE_MS
+      )
+    ) {
+      broadcastToAdmins(state, {
+        type: "group_play_note",
+        partId: part.id,
+        noteId: `live:${message.eventId}`,
+        eventId: message.eventId,
+        midi: message.midi,
+        presetKey: part.soundPresetKey,
+        durationMs: WRONG_NOTE_DURATION_MS,
+        velocity: state.wrongNoteVelocity,
+        playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+        source: "live"
+      });
+    }
   }
 
   const event: InputEventRecord = {

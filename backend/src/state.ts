@@ -6,6 +6,7 @@ import type {
   NoteJudgement,
   OrchestraAlgorithm,
   PartPublicRoom,
+  PathChoice,
   PerformanceStatus,
   PublicRuntimeState,
   PublicState,
@@ -80,6 +81,7 @@ export type RuntimeState = {
 
   aggregationAlgorithm: AggregationAlgorithm;
   orchestraAlgorithm: OrchestraAlgorithm;
+  pathChoice: PathChoice;
   wrongNoteVelocity: number;
 
   performanceTimers: ReturnType<typeof setTimeout>[];
@@ -120,9 +122,37 @@ export function createRuntimeState(
     surveyAnswers: new Map(),
     aggregationAlgorithm: "democratic",
     orchestraAlgorithm: "direct",
+    pathChoice: "piano",
     wrongNoteVelocity: 0.3,
     performanceTimers: []
   };
+}
+
+export function softResetToLobby(state: RuntimeState): void {
+  for (const timer of state.performanceTimers) {
+    clearTimeout(timer);
+  }
+  state.performanceTimers = [];
+
+  state.phase = "phase1_lobby";
+  state.performanceStatus = "idle";
+  state.performanceStartAtServerMs = undefined;
+  state.currentScoreId = undefined;
+
+  for (const room of state.parts.values()) {
+    room.students = [];
+  }
+  for (const student of state.students.values()) {
+    student.partId = undefined;
+  }
+
+  state.inputs.clear();
+  state.judgements.clear();
+  state.groupScores.clear();
+  state.globalScore = 0;
+  state.mutedGroups.clear();
+  state.activeKeysByStudent.clear();
+  state.surveyAnswers.clear();
 }
 
 export function resetRuntimeState(state: RuntimeState): void {
@@ -177,6 +207,7 @@ export function publicRuntimeState(state: RuntimeState): PublicRuntimeState {
     globalScore: state.globalScore,
     aggregationAlgorithm: state.aggregationAlgorithm,
     orchestraAlgorithm: state.orchestraAlgorithm,
+    pathChoice: state.pathChoice,
     wrongNoteVelocity: state.wrongNoteVelocity
   };
 }

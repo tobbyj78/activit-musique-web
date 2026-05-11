@@ -6,6 +6,7 @@ import type {
   GroupScore,
   OrchestraAlgorithm,
   PartPublicRoom,
+  PathChoice,
   PublicState,
   ScorePart,
   ServerMessage,
@@ -42,6 +43,9 @@ const HOTSPOT_NAME = "Iphone de Tom";
 const HOTSPOT_PASSWORD = "244466666";
 
 const ORCHESTRA_ALGORITHM_OPTIONS: { id: OrchestraAlgorithm; label: string; hint: string }[] = [
+  { id: "democratic", label: "Démocratique", hint: "≥1 joueur correct → la note de la partition sonne" },
+  { id: "majority", label: "Majorité", hint: "≥moitié du pupitre → la note sonne (utile à 3 joueurs)" },
+  { id: "doublure", label: "Doublure", hint: "Partition auto, +volume par joueur" },
   { id: "direct", label: "Direct (solo)", hint: "Chaque pression joue avec la durée de la partition" }
 ];
 
@@ -146,9 +150,11 @@ export function AdminPage({
       {phase === "phase1_lobby" ? (
         <Phase1View
           students={state.students}
+          pathChoice={state.pathChoice}
           aggregationAlgorithm={state.aggregationAlgorithm}
           orchestraAlgorithm={state.orchestraAlgorithm}
           wrongNoteVelocity={state.wrongNoteVelocity}
+          onSetPathChoice={(path) => send({ type: "admin_set_path_choice", path })}
           onSetAlgorithm={(algorithm) =>
             send({ type: "admin_set_aggregation_algorithm", algorithm })
           }
@@ -264,28 +270,35 @@ export function AdminPage({
 
 const WRONG_NOTE_VELOCITY_OPTIONS = [0.1, 0.2, 0.3];
 const VOTED_ALGOS: AggregationAlgorithm[] = ["democratic", "majority", "doublure"];
+const ORCHESTRA_FEEDBACK_ALGOS: OrchestraAlgorithm[] = ["democratic", "majority", "doublure"];
 
 function Phase1View({
   students,
+  pathChoice,
   aggregationAlgorithm,
   orchestraAlgorithm,
   wrongNoteVelocity,
+  onSetPathChoice,
   onSetAlgorithm,
   onSetOrchestraAlgorithm,
   onSetWrongNoteVelocity,
   onAdvance
 }: {
   students: StudentPublicSession[];
+  pathChoice: PathChoice;
   aggregationAlgorithm: AggregationAlgorithm;
   orchestraAlgorithm: OrchestraAlgorithm;
   wrongNoteVelocity: number;
+  onSetPathChoice(path: PathChoice): void;
   onSetAlgorithm(algorithm: AggregationAlgorithm): void;
   onSetOrchestraAlgorithm(algorithm: OrchestraAlgorithm): void;
   onSetWrongNoteVelocity(velocity: number): void;
   onAdvance(): void;
 }) {
   const onlineStudents = students.filter((student) => student.online);
-  const showVelocityPicker = VOTED_ALGOS.includes(aggregationAlgorithm);
+  const showVelocityPicker =
+    (pathChoice === "piano" && VOTED_ALGOS.includes(aggregationAlgorithm)) ||
+    (pathChoice === "orchestra" && ORCHESTRA_FEEDBACK_ALGOS.includes(orchestraAlgorithm));
 
   return (
     <section className="phase phase-1">
@@ -320,41 +333,58 @@ function Phase1View({
           </div>
         </div>
         <div className="phase1-algo">
-          <span className="phase1-algo-label">Algorithme phase 4</span>
-          <div className="phase1-algo-options">
-            {ALGORITHM_OPTIONS.map((option) => {
-              const active = option.id === aggregationAlgorithm;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`phase1-algo-option${active ? " is-active" : ""}`}
-                  onClick={() => onSetAlgorithm(option.id)}
-                >
-                  <span className="phase1-algo-option-label">{option.label}</span>
-                  <span className="phase1-algo-option-hint">{option.hint}</span>
-                </button>
-              );
-            })}
+          <div className="phase1-path-toggle">
+            <button
+              type="button"
+              className={`phase1-path-option${pathChoice === "piano" ? " is-active" : ""}`}
+              onClick={() => onSetPathChoice("piano")}
+            >
+              Piano
+            </button>
+            <button
+              type="button"
+              className={`phase1-path-option${pathChoice === "orchestra" ? " is-active" : ""}`}
+              onClick={() => onSetPathChoice("orchestra")}
+            >
+              Orchestre
+            </button>
           </div>
-          <div className="phase1-algo-divider" />
-          <span className="phase1-algo-label">Algorithme phase 8</span>
-          <div className="phase1-algo-options">
-            {ORCHESTRA_ALGORITHM_OPTIONS.map((option) => {
-              const active = option.id === orchestraAlgorithm;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`phase1-algo-option${active ? " is-active" : ""}`}
-                  onClick={() => onSetOrchestraAlgorithm(option.id)}
-                >
-                  <span className="phase1-algo-option-label">{option.label}</span>
-                  <span className="phase1-algo-option-hint">{option.hint}</span>
-                </button>
-              );
-            })}
-          </div>
+          <span className="phase1-algo-label">Algorithme</span>
+          {pathChoice === "piano" ? (
+            <div className="phase1-algo-options">
+              {ALGORITHM_OPTIONS.map((option) => {
+                const active = option.id === aggregationAlgorithm;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`phase1-algo-option${active ? " is-active" : ""}`}
+                    onClick={() => onSetAlgorithm(option.id)}
+                  >
+                    <span className="phase1-algo-option-label">{option.label}</span>
+                    <span className="phase1-algo-option-hint">{option.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="phase1-algo-options">
+              {ORCHESTRA_ALGORITHM_OPTIONS.map((option) => {
+                const active = option.id === orchestraAlgorithm;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`phase1-algo-option${active ? " is-active" : ""}`}
+                    onClick={() => onSetOrchestraAlgorithm(option.id)}
+                  >
+                    <span className="phase1-algo-option-label">{option.label}</span>
+                    <span className="phase1-algo-option-hint">{option.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
       <div className="phase1-cta">

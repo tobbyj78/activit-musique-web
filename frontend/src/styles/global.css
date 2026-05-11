@@ -780,6 +780,40 @@ ul {
   margin: 4px 0;
 }
 
+.phase1-path-toggle {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: #1b1917;
+  border: 1px solid rgba(247, 241, 223, 0.16);
+  border-radius: 12px;
+}
+
+.phase1-path-option {
+  flex: 1;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #d7cfbe;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.phase1-path-option:hover {
+  background: #221f1b;
+}
+
+.phase1-path-option.is-active {
+  background: #1f2826;
+  border-color: #56d7c4;
+  color: #56d7c4;
+}
+
 .phase1-algo-options {
   display: flex;
   flex-direction: column;
