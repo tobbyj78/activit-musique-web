@@ -40,6 +40,9 @@ const LIVE_PLAY_DURATION_MS = 15000;
 const LIVE_PLAY_VELOCITY = 0.7;
 const DIRECT_PLAY_DURATION_MS = 700;
 const DIRECT_PLAY_VELOCITY = 1.0;
+const WRONG_NOTE_TOLERANCE_MS = 100;
+const WRONG_NOTE_DURATION_MS = 400;
+const WRONG_NOTE_VELOCITY = 0.3;
 const COUNTDOWN_MS = 3000;
 const STATE_COALESCE_MS = 30;
 
@@ -688,6 +691,27 @@ function handleInputDown(
       });
     } else if (isBlindAlgo) {
       processBlindAlgorithmsDown(state, part, student, message);
+    } else if (
+      !hasMatchingExpectedNote(
+        part.notes,
+        message.midi,
+        message.estimatedServerEventAtMs,
+        state.performanceStartAtServerMs,
+        WRONG_NOTE_TOLERANCE_MS
+      )
+    ) {
+      broadcastToAdmins(state, {
+        type: "group_play_note",
+        partId: part.id,
+        noteId: `live:${message.eventId}`,
+        eventId: message.eventId,
+        midi: message.midi,
+        presetKey: part.soundPresetKey,
+        durationMs: WRONG_NOTE_DURATION_MS,
+        velocity: WRONG_NOTE_VELOCITY,
+        playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
+        source: "live"
+      });
     }
   }
 
@@ -788,6 +812,23 @@ function handleInputUp(
     judgedAtMs: Date.now()
   });
   emitJudgement(state, student, judgement);
+}
+
+function hasMatchingExpectedNote(
+  notes: ScheduledNote[],
+  midi: number,
+  eventAtServerMs: number,
+  startAtServerMs: number,
+  toleranceMs: number
+): boolean {
+  for (const note of notes) {
+    if (note.midi !== midi) continue;
+    const expectedAt = startAtServerMs + note.timestampMs;
+    if (Math.abs(eventAtServerMs - expectedAt) <= toleranceMs) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function findExpectedNote(
