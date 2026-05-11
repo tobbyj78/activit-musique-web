@@ -300,39 +300,37 @@ function Phase1View({
     (pathChoice === "piano" && VOTED_ALGOS.includes(aggregationAlgorithm)) ||
     (pathChoice === "orchestra" && ORCHESTRA_FEEDBACK_ALGOS.includes(orchestraAlgorithm));
 
+  const algoOptions =
+    pathChoice === "piano" ? ALGORITHM_OPTIONS : ORCHESTRA_ALGORITHM_OPTIONS;
+  const activeAlgoId =
+    pathChoice === "piano" ? aggregationAlgorithm : orchestraAlgorithm;
+  const setAlgo = (id: string) => {
+    if (pathChoice === "piano") {
+      onSetAlgorithm(id as AggregationAlgorithm);
+    } else {
+      onSetOrchestraAlgorithm(id as OrchestraAlgorithm);
+    }
+  };
+
   return (
     <section className="phase phase-1">
-      <div className="phase1-qr">
-        <QrCode value={QR_TARGET_URL} size={440} />
-        {showVelocityPicker ? (
-          <div className="phase1-vel">
-            <span className="phase1-vel-label">Vélocité fausse note</span>
-            <div className="phase1-vel-options">
-              {WRONG_NOTE_VELOCITY_OPTIONS.map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={`phase1-vel-option${wrongNoteVelocity === v ? " is-active" : ""}`}
-                  onClick={() => onSetWrongNoteVelocity(v)}
-                >
-                  {v.toFixed(1)}
-                </button>
-              ))}
+      <div className="phase1-layout">
+        <div className="phase1-col phase1-col-qr">
+          <QrCode value={QR_TARGET_URL} size={320} />
+          <div className="phase1-hotspot">
+            <span className="phase1-hotspot-label">Wifi</span>
+            <div className="phase1-hotspot-row">
+              <span className="phase1-hotspot-key">ID</span>
+              <span className="phase1-hotspot-name">{HOTSPOT_NAME}</span>
+            </div>
+            <div className="phase1-hotspot-row">
+              <span className="phase1-hotspot-key">MDP</span>
+              <span className="phase1-hotspot-pass">{HOTSPOT_PASSWORD}</span>
             </div>
           </div>
-        ) : null}
-        <div className="phase1-hotspot">
-          <span className="phase1-hotspot-label">Wifi</span>
-          <div className="phase1-hotspot-row">
-            <span className="phase1-hotspot-key">ID</span>
-            <span className="phase1-hotspot-name">{HOTSPOT_NAME}</span>
-          </div>
-          <div className="phase1-hotspot-row">
-            <span className="phase1-hotspot-key">MDP</span>
-            <span className="phase1-hotspot-pass">{HOTSPOT_PASSWORD}</span>
-          </div>
         </div>
-        <div className="phase1-algo">
+
+        <div className="phase1-col phase1-col-algo">
           <div className="phase1-path-toggle">
             <button
               type="button"
@@ -350,63 +348,64 @@ function Phase1View({
             </button>
           </div>
           <span className="phase1-algo-label">Algorithme</span>
-          {pathChoice === "piano" ? (
-            <div className="phase1-algo-options">
-              {ALGORITHM_OPTIONS.map((option) => {
-                const active = option.id === aggregationAlgorithm;
-                return (
+          <div className="phase1-algo-options">
+            {algoOptions.map((option) => {
+              const active = option.id === activeAlgoId;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`phase1-algo-option${active ? " is-active" : ""}`}
+                  onClick={() => setAlgo(option.id)}
+                >
+                  <span className="phase1-algo-option-label">{option.label}</span>
+                  <span className="phase1-algo-option-hint">{option.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {showVelocityPicker ? (
+            <div className="phase1-vel">
+              <span className="phase1-vel-label">Vélocité fausse note</span>
+              <div className="phase1-vel-options">
+                {WRONG_NOTE_VELOCITY_OPTIONS.map((v) => (
                   <button
-                    key={option.id}
+                    key={v}
                     type="button"
-                    className={`phase1-algo-option${active ? " is-active" : ""}`}
-                    onClick={() => onSetAlgorithm(option.id)}
+                    className={`phase1-vel-option${wrongNoteVelocity === v ? " is-active" : ""}`}
+                    onClick={() => onSetWrongNoteVelocity(v)}
                   >
-                    <span className="phase1-algo-option-label">{option.label}</span>
-                    <span className="phase1-algo-option-hint">{option.hint}</span>
+                    {v.toFixed(1)}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="phase1-algo-options">
-              {ORCHESTRA_ALGORITHM_OPTIONS.map((option) => {
-                const active = option.id === orchestraAlgorithm;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`phase1-algo-option${active ? " is-active" : ""}`}
-                    onClick={() => onSetOrchestraAlgorithm(option.id)}
-                  >
-                    <span className="phase1-algo-option-label">{option.label}</span>
-                    <span className="phase1-algo-option-hint">{option.hint}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          ) : null}
+        </div>
+
+        <div className="phase1-col phase1-col-counter">
+          <div className="phase1-counter">
+            <span className="phase1-count">{onlineStudents.length}</span>
+            <span className="phase1-count-label">
+              {onlineStudents.length <= 1 ? "élève connecté" : "élèves connectés"}
+            </span>
+          </div>
+          {onlineStudents.length > 0 ? (
+            <ul className="phase1-name-list">
+              {onlineStudents.map((student) => (
+                <li key={student.id}>{student.name}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
+
       <div className="phase1-cta">
         <PhaseAdvanceButton
           phase="phase1_lobby"
           onAdvance={onAdvance}
-          size="huge"
           disabled={onlineStudents.length === 0}
         />
-      </div>
-      <div className="phase1-counter">
-        <span className="phase1-count">{onlineStudents.length}</span>
-        <span className="phase1-count-label">
-          {onlineStudents.length <= 1 ? "élève connecté" : "élèves connectés"}
-        </span>
-        {onlineStudents.length > 0 ? (
-          <ul className="phase1-name-list">
-            {onlineStudents.map((student) => (
-              <li key={student.id}>{student.name}</li>
-            ))}
-          </ul>
-        ) : null}
       </div>
     </section>
   );

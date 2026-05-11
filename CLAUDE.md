@@ -69,7 +69,7 @@ bun run build          # frontend prod
 bun run check          # tsc sur les 3 packages
 ```
 
-`backend/.env.example` → `backend/.env`. Mot de passe admin par défaut : `admin123`. Pas de tests automatisés.
+`backend/.env.example` → `backend/.env`. Mot de passe admin par défaut : `$$`. Pas de tests automatisés.
 
 ⚠️ **Le dev tourne sur un serveur distant, pas sur cette machine.** L'install Node locale est cassée (`libllhttp.9.3.dylib` manquant) → `bun run check` / `bunx tsc` ne tournent pas ici, et `bun run dev` non plus. C'est attendu, ce n'est pas un signal qu'il faut "réparer" l'environnement. Pour valider, l'utilisateur teste visuellement sur le serveur — n'essaie pas de lancer le frontend/backend en local. Vérifie tes changements en relisant le code.
 
