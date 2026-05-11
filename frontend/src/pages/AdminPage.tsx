@@ -142,8 +142,12 @@ export function AdminPage({
         <Phase1View
           students={state.students}
           aggregationAlgorithm={state.aggregationAlgorithm}
+          wrongNoteVelocity={state.wrongNoteVelocity}
           onSetAlgorithm={(algorithm) =>
             send({ type: "admin_set_aggregation_algorithm", algorithm })
+          }
+          onSetWrongNoteVelocity={(velocity) =>
+            send({ type: "admin_set_wrong_note_velocity", velocity })
           }
           onAdvance={advance}
         />
@@ -249,23 +253,48 @@ export function AdminPage({
   );
 }
 
+const WRONG_NOTE_VELOCITY_OPTIONS = [0.1, 0.2, 0.3];
+const VOTED_ALGOS: AggregationAlgorithm[] = ["democratic", "majority", "doublure"];
+
 function Phase1View({
   students,
   aggregationAlgorithm,
+  wrongNoteVelocity,
   onSetAlgorithm,
+  onSetWrongNoteVelocity,
   onAdvance
 }: {
   students: StudentPublicSession[];
   aggregationAlgorithm: AggregationAlgorithm;
+  wrongNoteVelocity: number;
   onSetAlgorithm(algorithm: AggregationAlgorithm): void;
+  onSetWrongNoteVelocity(velocity: number): void;
   onAdvance(): void;
 }) {
   const onlineStudents = students.filter((student) => student.online);
+  const showVelocityPicker = VOTED_ALGOS.includes(aggregationAlgorithm);
 
   return (
     <section className="phase phase-1">
       <div className="phase1-qr">
         <QrCode value={QR_TARGET_URL} size={440} />
+        {showVelocityPicker ? (
+          <div className="phase1-vel">
+            <span className="phase1-vel-label">Vélocité fausse note</span>
+            <div className="phase1-vel-options">
+              {WRONG_NOTE_VELOCITY_OPTIONS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`phase1-vel-option${wrongNoteVelocity === v ? " is-active" : ""}`}
+                  onClick={() => onSetWrongNoteVelocity(v)}
+                >
+                  {v.toFixed(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="phase1-hotspot">
           <span className="phase1-hotspot-label">Wifi</span>
           <div className="phase1-hotspot-row">

@@ -78,6 +78,7 @@ export type RuntimeState = {
   surveyAnswers: Map<string, Map<string, string>>;
 
   aggregationAlgorithm: AggregationAlgorithm;
+  wrongNoteVelocity: number;
 
   performanceTimers: ReturnType<typeof setTimeout>[];
 };
@@ -116,6 +117,7 @@ export function createRuntimeState(
     activeKeysByStudent: new Map(),
     surveyAnswers: new Map(),
     aggregationAlgorithm: "democratic",
+    wrongNoteVelocity: 0.3,
     performanceTimers: []
   };
 }
@@ -170,7 +172,8 @@ export function publicRuntimeState(state: RuntimeState): PublicRuntimeState {
     surveyResults: computeSurveyResults(state),
     groupScores: Array.from(state.groupScores.values()),
     globalScore: state.globalScore,
-    aggregationAlgorithm: state.aggregationAlgorithm
+    aggregationAlgorithm: state.aggregationAlgorithm,
+    wrongNoteVelocity: state.wrongNoteVelocity
   };
 }
 

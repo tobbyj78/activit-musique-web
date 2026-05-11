@@ -705,6 +705,54 @@ ul {
   letter-spacing: 0.04em;
 }
 
+.phase1-vel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 1px solid rgba(238, 188, 91, 0.2);
+  border-radius: 14px;
+  background: #15130f;
+}
+
+.phase1-vel-label {
+  font-size: 0.8rem;
+  color: #eebc5b;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.phase1-vel-options {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.phase1-vel-option {
+  padding: 6px 14px;
+  background: #1b1917;
+  border: 1px solid rgba(247, 241, 223, 0.16);
+  border-radius: 8px;
+  color: #f7f1df;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.phase1-vel-option:hover {
+  background: #221f1b;
+}
+
+.phase1-vel-option.is-active {
+  background: #1f2826;
+  border-color: #56d7c4;
+  color: #56d7c4;
+}
+
 .phase1-algo {
   display: flex;
   flex-direction: column;

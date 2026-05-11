@@ -280,6 +280,15 @@ function handleMessage(
         broadcastState(state);
       });
       break;
+    case "admin_set_wrong_note_velocity":
+      withAdmin(state, connectionId, () => {
+        if (state.phase !== "phase1_lobby") {
+          return;
+        }
+        state.wrongNoteVelocity = message.velocity;
+        broadcastState(state);
+      });
+      break;
   }
 }
 
@@ -708,7 +717,7 @@ function handleInputDown(
         midi: message.midi,
         presetKey: part.soundPresetKey,
         durationMs: WRONG_NOTE_DURATION_MS,
-        velocity: WRONG_NOTE_VELOCITY,
+        velocity: state.wrongNoteVelocity,
         playAtServerMs: Date.now() + LIVE_PLAY_DELAY_MS,
         source: "live"
       });

@@ -112,6 +112,7 @@ export type PublicState = {
   groupScores: GroupScore[];
   globalScore: number;
   aggregationAlgorithm: AggregationAlgorithm;
+  wrongNoteVelocity: number;
 };
 
 export type PublicRuntimeState = Omit<PublicState, "scores">;
@@ -183,6 +184,11 @@ export const clientMessageSchema = z.union([
     ...baseFields,
     type: z.literal("admin_set_aggregation_algorithm"),
     algorithm: aggregationAlgorithmSchema
+  }),
+  z.object({
+    ...baseFields,
+    type: z.literal("admin_set_wrong_note_velocity"),
+    velocity: z.number().min(0).max(1)
   }),
   z.object({
     ...baseFields,
